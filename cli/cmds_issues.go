@@ -42,7 +42,6 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 	for _, repo := range f.Repos {
-		// For issues, only 1 repo will be passed so below will only use f.Repos[0]
 		r := gh.NewRepo(f.Owner, repo, f.Token)
 
 		// get all issues

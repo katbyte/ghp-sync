@@ -47,7 +47,7 @@ func GetFilterForLabels(labels []string) *Filter {
 				labelMap[l.GetName()] = true
 			}
 
-			c.Printf("    labels: ")
+			c.Printf("    Scanning issue: ")
 
 			andFail := false
 
@@ -57,15 +57,15 @@ func GetFilterForLabels(labels []string) *Filter {
 
 				// nolint:gocritic
 				if found && !negate {
-					c.Printf(" <green>%s</>", filterLabel)
+					c.Printf("%d <green>%s</> found", issue.GetNumber(), filterLabel)
 				} else if found && negate {
 					andFail = true
-					c.Printf(" <red>-%s</>", filterLabel)
+					c.Printf("%d not a <red>%s</>", issue.GetNumber(), filterLabel)
 				} else if negate {
-					c.Printf(" <green>-%s</>", filterLabel)
+					c.Printf("%d <green>%s</> found", issue.GetNumber(), filterLabel)
 				} else {
 					andFail = true
-					c.Printf(" <red>%s</>", filterLabel)
+					c.Printf("%d not a <red>%s</>", issue.GetNumber(), filterLabel)
 				}
 			}
 			fmt.Println()

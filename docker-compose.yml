@@ -13,3 +13,4 @@ services:
       - "GITHUB_REPO=terraform-provider-azurerm"
       - "GITHUB_PROJECT_NUMBER="
       - "GITHUB_AUTHORS="
+      - "GITHUB_LABELS="

@@ -38,7 +38,7 @@ func configureFlags(root *cobra.Command) error {
 		"repo":           "GITHUB_REPO", // todo rename this to repos
 		"project-number": "GITHUB_PROJECT_NUMBER",
 		"authors":        "GITHUB_AUTHORS",
-		"labels":         "",
+		"labels":         "GITHUB_LABELS",
 	}
 
 	for name, env := range m {
