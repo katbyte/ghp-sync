@@ -16,9 +16,9 @@ import (
 
 func CmdPRs(_ *cobra.Command, _ []string) error {
 	f := GetFlags()
-	p := gh.NewProject(f.Owner, f.ProjectNumber, f.Token)
+	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
-	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.Org, f.ProjectNumber)
+	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
 	project, err := p.GetProjectDetails()
 	if err != nil {
 		c.Printf("\n\n <red>ERROR!!</> %s", err)
@@ -44,10 +44,13 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 
-	// for reach repom get all prs, and add to project
+	// for reach repo, get all prs, and add to project
 	for _, repo := range f.Repos {
-		// todo support repos that are owner/repo by overriding the param one
-		r := gh.NewRepo(f.Owner, repo, f.Token)
+		r, err := gh.NewRepo(repo, f.Token)
+		if err != nil {
+			c.Printf("\n\n <red>ERROR!!</> %s", err)
+			return nil
+		}
 
 		// get all pull requests
 		c.Printf("Retrieving all prs for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
@@ -58,12 +61,13 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 		}
 		c.Printf(" found <yellow>%d</>\n", len(*prs))
 
-		if len(f.Authors) > 0 {
-			c.Printf(" filtering on: <yellow>%s:</>\n", f.Authors)
+		// todo copy over logic from "filters" used by issues command to replace the below logic
+		if len(f.Filters.Authors) > 0 {
+			c.Printf(" filtering on: <yellow>%s:</>\n", f.Filters.Authors)
 
 			// map of users
 			msUserMap := map[string]bool{}
-			for _, u := range f.Authors {
+			for _, u := range f.Filters.Authors {
 				msUserMap[u] = true
 			}
 

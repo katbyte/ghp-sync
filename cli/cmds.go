@@ -26,7 +26,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Short:         cmdName + "is a small utility to TODO",
 		Long:          `TODO`,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "org", "repo", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("USAGE: ghp-repo-syc [issues|prs] katbyte/ghp-repo-sync project")
 
@@ -46,14 +46,14 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Use:           "issues",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "org", "repo", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE:          CmdIssues,
 	})
 	root.AddCommand(&cobra.Command{
 		Use:           "prs",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "org", "repo", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE:          CmdPRs,
 	})
 

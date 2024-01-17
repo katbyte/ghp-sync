@@ -10,12 +10,17 @@ import (
 
 type FlagData struct {
 	Token         string
-	Org           string
-	Owner         string
 	Repos         []string
+	ProjectOwner  string
 	ProjectNumber int
-	Authors       []string
-	Labels        []string
+	IncludeClosed bool
+	Filters       Filters
+}
+
+type Filters struct {
+	Authors   []string
+	LabelsOr  []string
+	LabelsAnd []string
 }
 
 func configureFlags(root *cobra.Command) error {
@@ -23,22 +28,24 @@ func configureFlags(root *cobra.Command) error {
 	pflags := root.PersistentFlags()
 
 	pflags.StringVarP(&flags.Token, "token", "t", "", "github oauth token (GITHUB_TOKEN)")
-	pflags.StringVarP(&flags.Org, "org", "o", "", "github organization (GITHUB_ORG)") // nolint: misspell
-	pflags.StringVarP(&flags.Owner, "owner", "", "", "github repo owner, defaults to org (GITHUB_OWNER)")
-	pflags.StringSliceVarP(&flags.Repos, "repo", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `repo1,repo2`")
+	pflags.StringSliceVarP(&flags.Repos, "repo", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `owner1/repo1,owner2/repo2`")
+	pflags.StringVarP(&flags.ProjectOwner, "project-owner", "o", "", "github project owner (GITHUB_PROJECT_OWNER)")
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
-	pflags.StringSliceVarP(&flags.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
-	pflags.StringSliceVarP(&flags.Labels, "labels", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed prs/issues")
+	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
+	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
 
 	// binding map for viper/pflag -> env
 	m := map[string]string{
 		"token":          "GITHUB_TOKEN",
-		"org":            "GITHUB_ORG",
-		"owner":          "GITHUB_OWNER",
 		"repo":           "GITHUB_REPO", // todo rename this to repos
+		"project-owner":  "GITHUB_PROJECT_OWNER",
 		"project-number": "GITHUB_PROJECT_NUMBER",
+		"include-closed": "GITHUB_INCLUDE_CLOSED",
 		"authors":        "GITHUB_AUTHORS",
-		"labels":         "GITHUB_LABELS",
+		"labels-or":      "GITHUB_LABELS_OR",
+		"labels-and":     "GITHUB_LABELS_AND",
 	}
 
 	for name, env := range m {
@@ -57,10 +64,6 @@ func configureFlags(root *cobra.Command) error {
 }
 
 func GetFlags() FlagData {
-	owner := viper.GetString("owner")
-	if owner == "" {
-		owner = viper.GetString("org")
-	}
 
 	// TODO BUG for some reason it is not correctly splitting on ,? so hack this in
 	authors := viper.GetStringSlice("authors")
@@ -75,11 +78,15 @@ func GetFlags() FlagData {
 	// there has to be an easier way....
 	return FlagData{
 		Token:         viper.GetString("token"),
-		Org:           viper.GetString("org"),
-		Owner:         owner,
 		Repos:         repos,
 		ProjectNumber: viper.GetInt("project-number"),
-		Authors:       authors,
-		Labels:        viper.GetStringSlice("labels"),
+		ProjectOwner:  viper.GetString("project-owner"),
+		IncludeClosed: viper.GetBool("include-closed"),
+		Filters: Filters{
+			Authors:   authors,
+			LabelsOr:  viper.GetStringSlice("labels-or"),
+			LabelsAnd: viper.GetStringSlice("labels-and"),
+		},
 	}
+
 }

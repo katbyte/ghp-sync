@@ -2,13 +2,16 @@ package gh
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v45/github"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/katbyte/ghp-repo-sync/lib/clog"
+	"github.com/katbyte/ghp-repo-sync/lib/pointer"
 	"golang.org/x/oauth2"
 )
 
@@ -22,10 +25,20 @@ type Repo struct {
 	Token
 }
 
-func NewRepo(owner, repo, token string) Repo {
+func NewRepo(repo, token string) (*Repo, error) {
+	parts := strings.Split(repo, "/")
+
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo format, expected owner/name got %q", repo)
+	}
+
+	return pointer.To(NewRepoOwnerName(parts[0], parts[1], token)), nil
+}
+
+func NewRepoOwnerName(owner, name, token string) Repo {
 	r := Repo{
 		Owner: owner,
-		Name:  repo,
+		Name:  name,
 		Token: Token{
 			Token: nil,
 		},
@@ -77,7 +90,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 				i, err := strconv.ParseInt(reset, 10, 64)
 				if err == nil {
 					utime := time.Unix(i, 0)
-					wait := time.Until(utime) + time.Minute // add an extra min to be safe
+					wait := utime.Sub(time.Now()) + time.Minute // add an extra min to be safe
 					clog.Log.Errorf("ratelimited, parsed x-ratelimit-reset, waiting for %s", wait.String())
 					return wait
 				}
