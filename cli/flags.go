@@ -14,11 +14,13 @@ type FlagData struct {
 	ProjectOwner  string
 	ProjectNumber int
 	IncludeClosed bool
+	DryRun        bool
 	Filters       Filters
 }
 
 type Filters struct {
 	Authors   []string
+	Assignees []string
 	LabelsOr  []string
 	LabelsAnd []string
 }
@@ -33,8 +35,10 @@ func configureFlags(root *cobra.Command) error {
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
 	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed prs/issues")
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
+	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
 	m := map[string]string{
@@ -44,8 +48,10 @@ func configureFlags(root *cobra.Command) error {
 		"project-number": "GITHUB_PROJECT_NUMBER",
 		"include-closed": "GITHUB_INCLUDE_CLOSED",
 		"authors":        "GITHUB_AUTHORS",
+		"assignees":      "GITHUB_ASSIGNEES",
 		"labels-or":      "GITHUB_LABELS_OR",
 		"labels-and":     "GITHUB_LABELS_AND",
+		"dry-run":        "",
 	}
 
 	for name, env := range m {
@@ -74,6 +80,10 @@ func GetFlags() FlagData {
 	if len(repos) > 0 {
 		repos = strings.Split(repos[0], ",")
 	}
+	assignees := viper.GetStringSlice("assignees")
+	if len(assignees) > 0 {
+		assignees = strings.Split(assignees[0], ",")
+	}
 
 	// there has to be an easier way....
 	return FlagData{
@@ -82,11 +92,12 @@ func GetFlags() FlagData {
 		ProjectNumber: viper.GetInt("project-number"),
 		ProjectOwner:  viper.GetString("project-owner"),
 		IncludeClosed: viper.GetBool("include-closed"),
+		DryRun:        viper.GetBool("dry-run"),
 		Filters: Filters{
 			Authors:   authors,
+			Assignees: assignees,
 			LabelsOr:  viper.GetStringSlice("labels-or"),
 			LabelsAnd: viper.GetStringSlice("labels-and"),
 		},
 	}
-
 }

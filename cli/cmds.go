@@ -42,6 +42,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 			fmt.Println(cmdName + " v" + version.Version + "-" + version.GitCommit)
 		},
 	})
+
 	root.AddCommand(&cobra.Command{
 		Use:           "issues",
 		Args:          cobra.NoArgs,
@@ -49,6 +50,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE:          CmdIssues,
 	})
+
 	root.AddCommand(&cobra.Command{
 		Use:           "prs",
 		Args:          cobra.NoArgs,
@@ -56,6 +58,8 @@ func Make(cmdName string) (*cobra.Command, error) {
 		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE:          CmdPRs,
 	})
+
+	// TODO add CLEAR command to reset a project?
 
 	if err := configureFlags(root); err != nil {
 		return nil, fmt.Errorf("unable to configure flags: %w", err)
