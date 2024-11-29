@@ -58,34 +58,8 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 		}
 		c.Printf(" found <yellow>%d</>\n", len(*prs))
 
-		if len(f.Authors) > 0 {
-			c.Printf(" filtering on: <yellow>%s:</>\n", f.Authors)
-
-			// map of users
-			msUserMap := map[string]bool{}
-			for _, u := range f.Authors {
-				msUserMap[u] = true
-			}
-
-			var filteredPRs []github.PullRequest
-			for _, pr := range *prs {
-				if msUserMap[pr.User.GetLogin()] {
-					filteredPRs = append(filteredPRs, pr)
-				}
-			}
-
-			sort.Slice(filteredPRs, func(i, j int) bool {
-				return filteredPRs[i].GetNumber() < filteredPRs[j].GetNumber()
-			})
-
-			c.Printf("  Found <lightBlue>%d</> filtered PRs: ", len(filteredPRs))
-			for _, pr := range filteredPRs {
-				c.Printf("<white>%d</>,", pr.GetNumber())
-			}
-			c.Printf("\n\n")
-
-			prs = &filteredPRs
-		}
+		//filter them
+		prs = FilterByFlags(f, prs)
 
 		byStatus := map[string][]int{}
 
@@ -274,10 +248,12 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				{"-F", fmt.Sprintf("daysWait_value=%d", daysWaiting)},
 			}
 
-			out, err := r.GraphQLQuery(q, p)
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
-				return nil
+			if !f.DryRun {
+				out, err := r.GraphQLQuery(q, p)
+				if err != nil {
+					c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
+					return nil
+				}
 			}
 
 			c.Printf("\n")
@@ -291,8 +267,59 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 		}
 		c.Printf("\n")
 
-		c.Printf("Total of %d waiting for on average %d days\n", totalWaiting, totalDaysWaiting/totalWaiting)
 	}
 
 	return nil
+}
+
+func FilterByFlags(f FlagData, prs *[]github.PullRequest) *[]github.PullRequest {
+	if len(f.Authors) == 0 && len(f.Assignees) == 0 {
+		return prs
+	}
+
+	c.Printf(" filtering by authors: <yellow>%s:</>\n", f.Authors)
+	c.Printf(" filtering by assignees: <yellow>%s:</>\n", f.Assignees)
+
+	// map of users
+	authorMap := map[string]bool{}
+	for _, u := range f.Authors {
+		authorMap[u] = true
+	}
+
+	assigneeUserMap := map[string]bool{}
+	for _, u := range f.Assignees {
+		assigneeUserMap[u] = true
+	}
+
+	var filteredPRs []github.PullRequest
+	for _, pr := range *prs {
+		add := false
+
+		if authorMap[pr.User.GetLogin()] {
+			add = true
+		}
+
+		for _, a := range pr.Assignees {
+			if assigneeUserMap[a.GetLogin()] {
+				filteredPRs = append(filteredPRs, pr)
+				break
+			}
+		}
+
+		if add {
+			filteredPRs = append(filteredPRs, pr)
+		}
+	}
+
+	sort.Slice(filteredPRs, func(i, j int) bool {
+		return filteredPRs[i].GetNumber() < filteredPRs[j].GetNumber()
+	})
+
+	c.Printf("  Found <lightBlue>%d</> filtered PRs: ", len(filteredPRs))
+	for _, pr := range filteredPRs {
+		c.Printf("<white>%d</>,", pr.GetNumber())
+	}
+	c.Printf("\n\n")
+
+	return &filteredPRs
 }

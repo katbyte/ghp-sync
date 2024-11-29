@@ -15,7 +15,9 @@ type FlagData struct {
 	Repos         []string
 	ProjectNumber int
 	Authors       []string
+	Assignees     []string
 	Labels        []string
+	DryRun        bool
 }
 
 func configureFlags(root *cobra.Command) error {
@@ -27,8 +29,10 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringVarP(&flags.Owner, "owner", "", "", "github repo owner, defaults to org (GITHUB_OWNER)")
 	pflags.StringSliceVarP(&flags.Repos, "repo", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `repo1,repo2`")
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
-	pflags.StringSliceVarP(&flags.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
+	pflags.StringSliceVarP(&flags.Authors, "authors", "a", []string{}, "sync prs by these authors. ie 'katbyte,author2,author3'")
+	pflags.StringSliceVarP(&flags.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
 	pflags.StringSliceVarP(&flags.Labels, "labels", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
 	m := map[string]string{
@@ -38,7 +42,9 @@ func configureFlags(root *cobra.Command) error {
 		"repo":           "GITHUB_REPO", // todo rename this to repos
 		"project-number": "GITHUB_PROJECT_NUMBER",
 		"authors":        "GITHUB_AUTHORS",
+		"assignees":      "GITHUB_ASSIGNEES",
 		"labels":         "",
+		"dry-run":        "",
 	}
 
 	for name, env := range m {
@@ -71,6 +77,10 @@ func GetFlags() FlagData {
 	if len(repos) > 0 {
 		repos = strings.Split(repos[0], ",")
 	}
+	assignees := viper.GetStringSlice("assignees")
+	if len(assignees) > 0 {
+		assignees = strings.Split(assignees[0], ",")
+	}
 
 	// there has to be an easier way....
 	return FlagData{
@@ -80,6 +90,8 @@ func GetFlags() FlagData {
 		Repos:         repos,
 		ProjectNumber: viper.GetInt("project-number"),
 		Authors:       authors,
+		Assignees:     assignees,
 		Labels:        viper.GetStringSlice("labels"),
+		DryRun:        viper.GetBool("dry-run"),
 	}
 }
