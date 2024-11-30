@@ -19,25 +19,19 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	project, err := p.GetProjectDetailsOld()
+	err := p.LoadDetails()
 	if err != nil {
 		c.Printf("\n\n <red>ERROR!!</> %s", err)
 		return nil
 	}
-	pid := project.Data.Organization.ProjectV2.ID
-	c.Printf("  ID: <magenta>%s</>\n", pid)
+	c.Printf("  ID: <magenta>%s</>\n", p.ID)
 
-	statuses := map[string]string{}
-	fields := map[string]string{}
-
-	// TODO write GetProjectFields
-	for _, f := range project.Data.Organization.ProjectV2.Fields.Nodes {
-		fields[f.Name] = f.ID
+	// todo we can probably remove this? its just for printing the fields (we do this multiple times so maybe just a helper)
+	for _, f := range p.Fields {
 		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
 
 		if f.Name == "Status" {
 			for _, s := range f.Options {
-				statuses[s.Name] = s.ID
 				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.ID)
 			}
 		}
@@ -74,7 +68,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 			// flat := strings.Replace(strings.Replace(q, "\n", " ", -1), "\t", "", -1)
 			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.GetNumber(), prNode)
-			iid, err := p.AddItemOld(pid, prNode)
+			iid, err := p.AddItem(prNode)
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
 				continue
@@ -159,7 +153,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				}
 			}
 
-			status = statuses[statusText]
+			status = p.StatusIDs[statusText]
 			byStatus[statusText] = append(byStatus[statusText], pr.GetNumber())
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
@@ -237,17 +231,17 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				`
 
 			p := [][]string{
-				{"-f", "project=" + pid},
+				{"-f", "project=" + p.ID},
 				{"-f", "item=" + *iid},
-				{"-f", "status_field=" + fields["Status"]},
+				{"-f", "status_field=" + p.FieldIDs["Status"]},
 				{"-f", "status_value=" + status},
-				{"-f", "pr_field=" + fields["PR#"]},
+				{"-f", "pr_field=" + p.FieldIDs["PR#"]},
 				{"-f", fmt.Sprintf("pr_value=%d", *pr.Number)}, // todo string + value
-				{"-f", "user_field=" + fields["User"]},
+				{"-f", "user_field=" + p.FieldIDs["User"]},
 				{"-f", fmt.Sprintf("user_value=%s", pr.User.GetLogin())},
-				{"-f", "daysOpen_field=" + fields["Open Days"]},
+				{"-f", "daysOpen_field=" + p.FieldIDs["Open Days"]},
 				{"-F", fmt.Sprintf("daysOpen_value=%d", daysOpen)},
-				{"-f", "daysWait_field=" + fields["Waiting Days"]},
+				{"-f", "daysWait_field=" + p.FieldIDs["Waiting Days"]},
 				{"-F", fmt.Sprintf("daysWait_value=%d", daysWaiting)},
 			}
 

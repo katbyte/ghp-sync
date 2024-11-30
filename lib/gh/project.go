@@ -69,47 +69,6 @@ type ProjectDetailsResult struct {
 	} `json:"data"`
 }
 
-func (p *Project) GetProjectDetailsOld() (*ProjectDetailsResult, error) {
-	// nolint: misspell
-	q := `query=
-        query($org: String!, $number: Int!) {
-            organization(login: $org){
-                projectV2(number: $number) {
-                    id
-                    fields(first:40) {
-                        nodes {
-                            ... on ProjectV2Field {
-                                id
-                                name
-                            }
-                            ... on ProjectV2SingleSelectField {
-                                id
-                                name
-                                options {
-                                    id
-                                    name
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    `
-
-	params := [][]string{
-		{"-f", "org=" + p.Owner},
-		{"-F", "number=" + strconv.Itoa(p.Number)},
-	}
-
-	var project ProjectDetailsResult
-	if err := p.GraphQLQueryUnmarshal(q, params, &project); err != nil {
-		return nil, err
-	}
-
-	return &project, nil
-}
-
 func (p *Project) LoadDetails() error {
 	// nolint: misspell
 	q := `query=
@@ -296,26 +255,6 @@ func (p *Project) SetItemStatus(itemId, status string) error {
 
 	_, err := p.GraphQLQuery(q, fields)
 	return err
-}
-
-func (t Token) AddItemOld(projectID, nodeID string) (*string, error) {
-	q := `query=
-        mutation($project:ID!, $pr:ID!) {
-          addProjectV2ItemById(input: {projectId: $project, contentId: $pr}) {
-            item {
-              id
-            }
-          }
-        }
-    `
-
-	p := [][]string{
-		{"-f", "project=" + projectID},
-		{"-f", "pr=" + nodeID},
-		{"--jq", ".data.addProjectV2ItemById.item.id"},
-	}
-
-	return t.GraphQLQuery(q, p)
 }
 
 // for not we hard code the project fields we want (dueDate and type)

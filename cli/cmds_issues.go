@@ -18,29 +18,25 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	project, err := p.GetProjectDetailsOld()
+	err := p.LoadDetails()
 	if err != nil {
 		c.Printf("\n\n <red>ERROR!!</> %s", err)
 		return nil
 	}
-	pid := project.Data.Organization.ProjectV2.ID
-	c.Printf("  ID: <magenta>%s</>\n", pid)
+	c.Printf("  ID: <magenta>%s</>\n", p.ID)
 
-	statuses := map[string]string{}
-	fields := map[string]string{}
-
-	for _, f := range project.Data.Organization.ProjectV2.Fields.Nodes {
-		fields[f.Name] = f.ID
+	// todo we can probably remove this? its just for printing the fields
+	for _, f := range p.Fields {
 		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
 
 		if f.Name == "Status" {
 			for _, s := range f.Options {
-				statuses[s.Name] = s.ID
 				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.ID)
 			}
 		}
 	}
 	fmt.Println()
+
 	for _, repo := range f.Repos {
 		r, err := gh.NewRepo(repo, f.Token)
 		if err != nil {
@@ -107,7 +103,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			c.Printf("  open %d days\n", daysSinceCreation)
 
 			c.Printf("  syncing (<cyan>%s</>) to project.. ", issueNode)
-			iid, err := p.AddItemOld(pid, issueNode)
+			iid, err := p.AddItem(issueNode)
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
 				continue
@@ -161,13 +157,13 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 				`
 
 			p := [][]string{
-				{"-f", "project=" + pid},
+				{"-f", "project=" + p.ID},
 				{"-f", "item=" + *iid},
-				{"-f", "user_field=" + fields["User"]},
+				{"-f", "user_field=" + p.FieldIDs["User"]},
 				{"-f", fmt.Sprintf("user_value=%s", issue.User.GetLogin())},
-				{"-f", "issue_field=" + fields["Issue#"]},
+				{"-f", "issue_field=" + p.FieldIDs["Issue#"]},
 				{"-f", fmt.Sprintf("issue_value=%d", *issue.Number)},
-				{"-f", "daysSinceCreation_field=" + fields["Age"]},
+				{"-f", "daysSinceCreation_field=" + p.FieldIDs["Age"]},
 				{"-F", fmt.Sprintf("daysSinceCreation_value=%d", daysSinceCreation)},
 			}
 
