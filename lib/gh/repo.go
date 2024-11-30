@@ -3,16 +3,15 @@ package gh
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/google/go-github/v45/github"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/katbyte/ghp-repo-sync/lib/clog"
 	"github.com/katbyte/ghp-repo-sync/lib/pointer"
 	"golang.org/x/oauth2"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type Token struct {
@@ -49,28 +48,6 @@ func NewRepoOwnerName(owner, name, token string) Repo {
 	}
 
 	return r
-}
-
-type Project struct {
-	Owner  string
-	Number int
-	Token
-}
-
-func NewProject(owner string, number int, token string) Project {
-	p := Project{
-		Owner:  owner,
-		Number: number,
-		Token: Token{
-			Token: nil,
-		},
-	}
-
-	if token != "" {
-		p.Token.Token = &token
-	}
-
-	return p
 }
 
 func (t Token) NewClient() (*github.Client, context.Context) {
@@ -116,4 +93,50 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	}
 
 	return github.NewClient(retryClient.StandardClient()), ctx
+}
+
+type PRApproval struct {
+	Data struct {
+		Repository struct {
+			PullRequest struct {
+				Title          string
+				ReviewDecision string
+			}
+		}
+	}
+}
+
+func (r Repo) PRReviewDecision(pr int) (*string, error) {
+	q := `query=
+        query($owner: String!, $repo: String!, $pr: Int!) {
+            repository(name: $repo, owner: $owner) {
+                pullRequest(number: $pr) {
+                    title
+                    reviewDecision
+                    state
+                    reviews(first: 100) {
+                        nodes {
+                            state
+                            author {
+                                login
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    `
+
+	p := [][]string{
+		{"-f", "owner=" + r.Owner},
+		{"-f", "repo=" + r.Name},
+		{"-F", "pr=" + strconv.Itoa(pr)},
+	}
+
+	var approved PRApproval
+	if err := r.GraphQLQueryUnmarshal(q, p, &approved); err != nil {
+		return nil, err
+	}
+
+	return &approved.Data.Repository.PullRequest.ReviewDecision, nil
 }

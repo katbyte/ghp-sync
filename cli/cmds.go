@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/katbyte/ghp-repo-sync/version"
+	"github.com/katbyte/ghp-repo-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,6 +36,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 
 	root.AddCommand(&cobra.Command{
 		Use:           "version",
+		Short:         "Print the version",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -45,6 +46,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 
 	root.AddCommand(&cobra.Command{
 		Use:           "issues",
+		Short:         "Sync issues from a repo to a project",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
@@ -53,10 +55,20 @@ func Make(cmdName string) (*cobra.Command, error) {
 
 	root.AddCommand(&cobra.Command{
 		Use:           "prs",
+		Short:         "Sync PRs from a repo to a project",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE:          CmdPRs,
+	})
+
+	root.AddCommand(&cobra.Command{
+		Use:           "project source-project-owner source-project-number",
+		Short:         "Sync issues and PRs between two projects",
+		Args:          cobra.ExactArgs(2),
+		SilenceErrors: true,
+		PreRunE:       ValidateParams([]string{"token", "project-owner", "project-number"}),
+		RunE:          CmdSync,
 	})
 
 	// TODO add CLEAR command to reset a project?

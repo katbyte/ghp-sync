@@ -75,3 +75,14 @@ func (r Repo) GetAllPullRequests(state string) (*[]github.PullRequest, error) {
 
 	return &allPRs, nil
 }
+
+func (r Repo) GetPullRequest(pr int) (*github.PullRequest, error) {
+	client, ctx := r.NewClient()
+
+	p, _, err := client.PullRequests.Get(ctx, r.Owner, r.Name, pr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get PR %d for %s/%s: %w", pr, r.Owner, r.Name, err)
+	}
+
+	return p, nil
+}

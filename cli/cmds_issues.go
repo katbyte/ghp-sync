@@ -18,25 +18,25 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	project, err := p.GetProjectDetails()
+	project, err := p.GetProjectDetailsOld()
 	if err != nil {
 		c.Printf("\n\n <red>ERROR!!</> %s", err)
 		return nil
 	}
-	pid := project.Data.Organization.ProjectV2.Id
+	pid := project.Data.Organization.ProjectV2.ID
 	c.Printf("  ID: <magenta>%s</>\n", pid)
 
 	statuses := map[string]string{}
 	fields := map[string]string{}
 
 	for _, f := range project.Data.Organization.ProjectV2.Fields.Nodes {
-		fields[f.Name] = f.Id
-		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.Id)
+		fields[f.Name] = f.ID
+		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
 
 		if f.Name == "Status" {
 			for _, s := range f.Options {
-				statuses[s.Name] = s.Id
-				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.Id)
+				statuses[s.Name] = s.ID
+				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.ID)
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			c.Printf("  open %d days\n", daysSinceCreation)
 
 			c.Printf("  syncing (<cyan>%s</>) to project.. ", issueNode)
-			iid, err := p.AddToProject(pid, issueNode)
+			iid, err := p.AddItemOld(pid, issueNode)
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
 				continue
