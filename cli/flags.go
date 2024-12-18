@@ -16,6 +16,7 @@ type FlagData struct {
 	IncludeClosed bool
 	DryRun        bool
 	Filters       Filters
+	Jira          Jira
 }
 
 type Filters struct {
@@ -23,6 +24,15 @@ type Filters struct {
 	Assignees []string
 	LabelsOr  []string
 	LabelsAnd []string
+}
+
+type Jira struct {
+	Url    string
+	User   string
+	Token  string
+	JQL    string
+	Fields []string
+	Expand []string
 }
 
 func configureFlags(root *cobra.Command) error {
@@ -34,10 +44,19 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringVarP(&flags.ProjectOwner, "project-owner", "o", "", "github project owner (GITHUB_PROJECT_OWNER)")
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
 	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed prs/issues")
+
+	pflags.StringVarP(&flags.Jira.Url, "jira-url", "", "", "jira instance url")
+	pflags.StringVarP(&flags.Jira.User, "jira-user", "", "", "jira user")
+	pflags.StringVarP(&flags.Jira.Token, "jira-token", "", "", "jira oauth token (JIRA_TOKEN)")
+	pflags.StringVarP(&flags.Jira.JQL, "jira-jql", "", "", "jira jql query to list all issues")
+	pflags.StringSliceVarP(&flags.Jira.Fields, "jira-fields", "", nil, "jira fields to fetch seperated by commas")
+	pflags.StringSliceVarP(&flags.Jira.Expand, "jira-expand", "", nil, "jira fields to expand seperated by commas")
+
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
+
 	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
@@ -47,6 +66,12 @@ func configureFlags(root *cobra.Command) error {
 		"project-owner":  "GITHUB_PROJECT_OWNER",
 		"project-number": "GITHUB_PROJECT_NUMBER",
 		"include-closed": "GITHUB_INCLUDE_CLOSED",
+		"jira-url":       "JIRA_URL",
+		"jira-user":      "JIRA_USER",
+		"jira-jql":       "JIRA_JQL",
+		"jira-token":     "JIRA_TOKEN",
+		"jira-fields":    "JIRA_FIELDS",
+		"jira-expand":    "JIRA_EXPAND",
 		"authors":        "GITHUB_AUTHORS",
 		"assignees":      "GITHUB_ASSIGNEES",
 		"labels-or":      "GITHUB_LABELS_OR",
@@ -72,6 +97,17 @@ func configureFlags(root *cobra.Command) error {
 func GetFlags() FlagData {
 
 	// TODO BUG for some reason it is not correctly splitting on ,? so hack this in
+
+	jiraFields := viper.GetStringSlice("jira-fields")
+	if len(jiraFields) > 0 {
+		jiraFields = strings.Split(jiraFields[0], ",")
+	}
+
+	jiraExpand := viper.GetStringSlice("jira-expand")
+	if len(jiraExpand) > 0 {
+		jiraExpand = strings.Split(jiraExpand[0], ",")
+	}
+
 	authors := viper.GetStringSlice("authors")
 	if len(authors) > 0 {
 		authors = strings.Split(authors[0], ",")
@@ -92,7 +128,18 @@ func GetFlags() FlagData {
 		ProjectNumber: viper.GetInt("project-number"),
 		ProjectOwner:  viper.GetString("project-owner"),
 		IncludeClosed: viper.GetBool("include-closed"),
-		DryRun:        viper.GetBool("dry-run"),
+
+		DryRun: viper.GetBool("dry-run"),
+
+		Jira: Jira{
+			Url:    viper.GetString("jira-url"),
+			User:   viper.GetString("jira-user"),
+			Token:  viper.GetString("jira-token"),
+			JQL:    viper.GetString("jira-jql"),
+			Fields: jiraFields,
+			Expand: jiraExpand,
+		},
+
 		Filters: Filters{
 			Authors:   authors,
 			Assignees: assignees,

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/katbyte/ghp-repo-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project
+	"github.com/katbyte/ghp-repo-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project & jira <> gh TODO yes we should
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -71,7 +71,16 @@ func Make(cmdName string) (*cobra.Command, error) {
 		RunE:          CmdSync,
 	})
 
-	// TODO add CLEAR command to reset a project?
+	root.AddCommand(&cobra.Command{
+		Use:           "jira",
+		Short:         "sync from jira to gh project",
+		Args:          cobra.NoArgs,
+		SilenceErrors: true,
+		PreRunE:       ValidateParams([]string{"token", "project-owner", "project-number", "jira-url", "jira-user", "jira-token", "jira-jql"}),
+		RunE:          CmdJIRA,
+	})
+
+	// TODO add CLEAR command to reset a project? other commands to cleanup project?
 
 	if err := configureFlags(root); err != nil {
 		return nil, fmt.Errorf("unable to configure flags: %w", err)

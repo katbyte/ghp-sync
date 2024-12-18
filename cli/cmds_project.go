@@ -112,7 +112,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 		c.Printf("<blue>updating</>...")
 
 		//update status to "Unclaimed PR" & update request type to
-		// TODO we can loop through the fields and build a more dynamic query from a function p.UpdateItemFields()
+		// TODO switch to gh.UpdateItem
 		q := `query=
 					mutation (
                       $project:ID!, $item:ID!,

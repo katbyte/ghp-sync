@@ -110,6 +110,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			}
 			c.Printf("<magenta>%s</>", *iid)
 
+			// TODO switch to gh.UpdateItem
 			q := `query=
 					mutation (
 					  $project:ID!, $item:ID!, 

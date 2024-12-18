@@ -158,6 +158,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
 
+			// TODO switch to gh.UpdateItem
 			q := `query=
 					mutation (
                       $project:ID!, $item:ID!, 
