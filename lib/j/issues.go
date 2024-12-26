@@ -26,14 +26,13 @@ func (i Instance) ListAllIssues(jql string, fields, expand *[]string, cb func(*m
 		if err = cb(result, resp); err != nil {
 			return fmt.Errorf("callback failed for %s @ %s (StartAt %d): %w", i.URL, jql, startAt, err)
 		}
+		// Update the startAt for the next iteration
+		startAt += IssuePageSize
 
 		if startAt > result.Total {
 			// This means we have fetched all issues
 			break
 		}
-
-		// Update the startAt for the next iteration
-		startAt += IssuePageSize
 	}
 
 	return nil
