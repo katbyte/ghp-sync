@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+// TODO - this is a lot of flags, we should move this to a config file
+
 type FlagData struct {
 	Token         string
 	Repos         []string
@@ -27,12 +29,25 @@ type Filters struct {
 }
 
 type Jira struct {
-	Url    string
-	User   string
-	Token  string
-	JQL    string
+	Url   string
+	User  string
+	Token string
+	JQL   string
+
 	Fields []string
 	Expand []string
+
+	IssueLinkCustomFieldID string
+
+	CustomFieldsStr string
+	CustomFields    []JiraCustomFields
+}
+
+type JiraCustomFields struct {
+	ID           string
+	Name         string
+	Type         string
+	ProjectField string
 }
 
 func configureFlags(root *cobra.Command) error {
@@ -52,6 +67,10 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringSliceVarP(&flags.Jira.Fields, "jira-fields", "", nil, "jira fields to fetch seperated by commas")
 	pflags.StringSliceVarP(&flags.Jira.Expand, "jira-expand", "", nil, "jira fields to expand seperated by commas")
 
+	// this is the limit of what we should be putting into ENV/flags, should be a config file TODO
+	pflags.StringVarP(&flags.Jira.IssueLinkCustomFieldID, "jira-issue-link-custom-field-id", "", "", "jira custom field id for gh issue link")
+	pflags.StringVarP(&flags.Jira.CustomFieldsStr, "jira-custom-fields", "", "", "jira custom fields to fetch in the format of `customfield_10001|name|type|project_field,customfield_10502|name|type|project_field`")
+
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
@@ -60,23 +79,26 @@ func configureFlags(root *cobra.Command) error {
 	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
+	// this is too large now, we need to make a config file
 	m := map[string]string{
-		"token":          "GITHUB_TOKEN",
-		"repo":           "GITHUB_REPO", // todo rename this to repos
-		"project-owner":  "GITHUB_PROJECT_OWNER",
-		"project-number": "GITHUB_PROJECT_NUMBER",
-		"include-closed": "GITHUB_INCLUDE_CLOSED",
-		"jira-url":       "JIRA_URL",
-		"jira-user":      "JIRA_USER",
-		"jira-jql":       "JIRA_JQL",
-		"jira-token":     "JIRA_TOKEN",
-		"jira-fields":    "JIRA_FIELDS",
-		"jira-expand":    "JIRA_EXPAND",
-		"authors":        "GITHUB_AUTHORS",
-		"assignees":      "GITHUB_ASSIGNEES",
-		"labels-or":      "GITHUB_LABELS_OR",
-		"labels-and":     "GITHUB_LABELS_AND",
-		"dry-run":        "",
+		"token":                           "GITHUB_TOKEN",
+		"repo":                            "GITHUB_REPO", // todo rename this to repos
+		"project-owner":                   "GITHUB_PROJECT_OWNER",
+		"project-number":                  "GITHUB_PROJECT_NUMBER",
+		"include-closed":                  "GITHUB_INCLUDE_CLOSED",
+		"jira-url":                        "JIRA_URL",
+		"jira-user":                       "JIRA_USER",
+		"jira-jql":                        "JIRA_JQL",
+		"jira-token":                      "JIRA_TOKEN",
+		"jira-fields":                     "JIRA_FIELDS",
+		"jira-expand":                     "JIRA_EXPAND",
+		"jira-issue-link-custom-field-id": "JIRA_ISSUE_LINK_CUSTOM_FIELD_ID",
+		"jira-custom-fields":              "JIRA_CUSTOM_FIELDS",
+		"authors":                         "GITHUB_AUTHORS",
+		"assignees":                       "GITHUB_ASSIGNEES",
+		"labels-or":                       "GITHUB_LABELS_OR",
+		"labels-and":                      "GITHUB_LABELS_AND",
+		"dry-run":                         "",
 	}
 
 	for name, env := range m {
@@ -121,6 +143,29 @@ func GetFlags() FlagData {
 		assignees = strings.Split(assignees[0], ",")
 	}
 
+	// custom fields
+	jiraCustomFieldsStr := viper.GetString("jira-custom-fields")
+	jiraCustomFields := []JiraCustomFields{}
+	if jiraCustomFieldsStr != "" {
+		fields := strings.Split(jiraCustomFieldsStr, ",")
+		for _, cf := range fields {
+			cfParts := strings.Split(cf, "|")
+			if len(cfParts) != 4 {
+				fmt.Printf("invalid custom field format, expected id|name|type|project_field got %q\n", cf)
+				continue
+			}
+
+			jiraCustomField := JiraCustomFields{
+				ID:           cfParts[0],
+				Name:         cfParts[1],
+				Type:         cfParts[2],
+				ProjectField: cfParts[3],
+			}
+
+			jiraCustomFields = append(jiraCustomFields, jiraCustomField)
+		}
+	}
+
 	// there has to be an easier way....
 	return FlagData{
 		Token:         viper.GetString("token"),
@@ -138,6 +183,11 @@ func GetFlags() FlagData {
 			JQL:    viper.GetString("jira-jql"),
 			Fields: jiraFields,
 			Expand: jiraExpand,
+
+			IssueLinkCustomFieldID: viper.GetString("jira-issue-link-custom-field-id"),
+
+			CustomFieldsStr: jiraCustomFieldsStr,
+			CustomFields:    jiraCustomFields,
 		},
 
 		Filters: Filters{
