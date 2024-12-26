@@ -227,6 +227,7 @@ type ItemValueType int
 const (
 	ItemValueTypeText ItemValueType = iota
 	ItemValueTypeNumber
+	ItemValueTypeSingleSelect
 	ItemValueTypeDate
 )
 
@@ -268,6 +269,8 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 		varDefs = append(varDefs, fieldIDVar+":ID!")
 		switch f.Type {
 		case ItemValueTypeText:
+			fallthrough
+		case ItemValueTypeSingleSelect:
 			varDefs = append(varDefs, fieldValueVar+":String!")
 		case ItemValueTypeNumber:
 			varDefs = append(varDefs, fieldValueVar+":Float!")
@@ -279,6 +282,8 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 		params = append(params, []string{"-f", fmt.Sprintf("%s_field=%s", fieldAlias, f.FieldID)})
 		switch f.Type {
 		case ItemValueTypeText:
+			fallthrough
+		case ItemValueTypeSingleSelect:
 			params = append(params, []string{"-f", fmt.Sprintf("%s_value=%v", fieldAlias, f.Value)})
 		case ItemValueTypeNumber:
 			// Use -F so the value is recognized as a JSON number
@@ -292,6 +297,8 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 			valuePart = fmt.Sprintf("value: { text: %s }", fieldValueVar)
 		case ItemValueTypeNumber:
 			valuePart = fmt.Sprintf("value: { number: %s }", fieldValueVar)
+		case ItemValueTypeSingleSelect:
+			valuePart = fmt.Sprintf("value: { singleSelectOptionId: %s }", fieldValueVar)
 		}
 
 		setCalls = append(setCalls, fmt.Sprintf(`

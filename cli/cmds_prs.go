@@ -157,101 +157,19 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			byStatus[statusText] = append(byStatus[statusText], pr.GetNumber())
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
-
-			// TODO switch to gh.UpdateItem
-			q := `query=
-					mutation (
-                      $project:ID!, $item:ID!, 
-                      $status_field:ID!, $status_value:String!, 
-                      $pr_field:ID!, $pr_value:String!, 
-                      $user_field:ID!, $user_value:String!, 
-                      $daysOpen_field:ID!, $daysOpen_value:Float!, 
-                      $daysWait_field:ID!, $daysWait_value:Float!,
-					) {
-					  set_status: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $status_field
-						value: { 
-						  singleSelectOptionId: $status_value
-						  }
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_pr: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $pr_field
-						value: { 
-						  text: $pr_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-                      set_user: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $user_field
-						value: { 
-						  text: $user_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_dopen: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $daysOpen_field
-						value: { 
-						  number: $daysOpen_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_dwait: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $daysWait_field
-						value: { 
-						  number: $daysWait_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					}
-				`
-
-			p := [][]string{
-				{"-f", "project=" + p.ID},
-				{"-f", "item=" + *iid},
-				{"-f", "status_field=" + p.FieldIDs["Status"]},
-				{"-f", "status_value=" + status},
-				{"-f", "pr_field=" + p.FieldIDs["PR#"]},
-				{"-f", fmt.Sprintf("pr_value=%d", *pr.Number)}, // todo string + value
-				{"-f", "user_field=" + p.FieldIDs["User"]},
-				{"-f", fmt.Sprintf("user_value=%s", pr.User.GetLogin())},
-				{"-f", "daysOpen_field=" + p.FieldIDs["Open Days"]},
-				{"-F", fmt.Sprintf("daysOpen_value=%d", daysOpen)},
-				{"-f", "daysWait_field=" + p.FieldIDs["Waiting Days"]},
-				{"-F", fmt.Sprintf("daysWait_value=%d", daysWaiting)},
+			
+			fields := []gh.ProjectItemField{
+				{Name: "number", FieldID: p.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: *pr.Number},
+				{Name: "status", FieldID: p.FieldIDs["Status"], Type: gh.ItemValueTypeSingleSelect, Value: status},
+				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.User.GetLogin()},
+				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
+				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
 			}
 
-			if !f.DryRun {
-				out, err := r.GraphQLQuery(q, p)
-				if err != nil {
-					c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
-					return nil
-				}
+			err = p.UpdateItem(*iid, fields)
+			if err != nil {
+				c.Printf("\n\n <red>ERROR!!</> %s", err)
+				continue
 			}
 
 			c.Printf("\n")
