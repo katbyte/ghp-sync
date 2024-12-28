@@ -64,6 +64,8 @@ func CmdSync(_ *cobra.Command, args []string) error {
 			continue
 		}
 
+		//TODO filters - now we only want ones with status X
+
 		// parse the url (todo handle issues?)
 		owner, name, _, number, err := gh.ParseGitHubURL(srcItem.URL)
 		if err != nil {
@@ -86,7 +88,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 
 		nodeID := *pr.NodeID
 		dstItemId := ""
-		c.Printf("<blue>%s</>/<lightBlue>%s</>#<lightCyan>%d</> ", owner, name, pr.GetNumber())
+		c.Printf("<blue>%s</>/<lightBlue>%s</>#<lightCyan>%d</> \n", owner, name, pr.GetNumber())
 		if di, ok := dstItemNodeIDMap[nodeID]; ok {
 			c.Printf("  already exists, ")
 			dstItemId = di.ID
@@ -101,7 +103,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 			c.Printf("(<magenta>%s</>), setting status.. ", *iid)
 			dstItemId = *iid
 
-			err = destination.SetItemStatus(dstItemId, "Unclaimed PR")
+			err = destination.SetItemStatus(dstItemId, "Backlog [PRs]")
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
 				continue
@@ -111,87 +113,19 @@ func CmdSync(_ *cobra.Command, args []string) error {
 		// update the other fields
 		c.Printf("<blue>updating</>...")
 
-		//update status to "Unclaimed PR" & update request type to
-		// TODO we can loop through the fields and build a more dynamic query from a function p.UpdateItemFields()
-		q := `query=
-					mutation (
-                      $project:ID!, $item:ID!,
-                      $requesttype_field:ID!, $requesttype_value:String!,
-					  $pr_field:ID!, $pr_value:String!, 
-                      $user_field:ID!, $user_value:String!,
-					  $duedate_field: ID!, $duedate_value: Date!
-					) {
-					  set_requesttype: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $requesttype_field
-						value: { 
-						  text: $requesttype_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_pr: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $pr_field
-						value: { 
-						  text: $pr_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-                      set_user: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $user_field
-						value: { 
-						  text: $user_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_duedate: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $duedate_field
-						value: { 
-						  date: $duedate_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					}
-				`
-
-		p := [][]string{
-			{"-f", "project=" + destination.ID},
-			{"-f", "item=" + dstItemId},
-			{"-f", "pr_field=" + destination.FieldIDs["PR#"]},
-			{"-f", fmt.Sprintf("pr_value=%d", *pr.Number)}, // todo string + value
-			{"-f", "user_field=" + destination.FieldIDs["User"]},
-			{"-f", fmt.Sprintf("user_value=%s", pr.User.GetLogin())},
-			{"-f", "requesttype_field=" + destination.FieldIDs["Request Type"]},
-			{"-f", fmt.Sprintf("requesttype_value=%s", srcItem.RequestType)},
-			{"-f", "duedate_field=" + destination.FieldIDs["Due Date"]},
-			{"-f", fmt.Sprintf("duedate_value=%s", srcItem.DueDate)}, // Replace 'dueDate' with your due date value
+		fields := []gh.ProjectItemField{
+			{Name: "number", FieldID: destination.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: *pr.Number},
+			{Name: "user", FieldID: destination.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.User.GetLogin()},
+			{Name: "requesttype", FieldID: destination.FieldIDs["Request Type"], Type: gh.ItemValueTypeText, Value: srcItem.RequestType},
+			{Name: "duedate", FieldID: destination.FieldIDs["Due Date"], Type: gh.ItemValueTypeDate, Value: srcItem.DueDate},
 		}
 
-		if !f.DryRun {
-			out, err := r.GraphQLQuery(q, p)
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
-				return nil
-			}
+		err = destination.UpdateItem(dstItemId, fields)
+		if err != nil {
+			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
+			continue
 		}
+
 		fmt.Println()
 	}
 

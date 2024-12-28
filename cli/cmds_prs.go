@@ -157,7 +157,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			byStatus[statusText] = append(byStatus[statusText], pr.GetNumber())
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
-			
+
 			fields := []gh.ProjectItemField{
 				{Name: "number", FieldID: p.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: *pr.Number},
 				{Name: "status", FieldID: p.FieldIDs["Status"], Type: gh.ItemValueTypeSingleSelect, Value: status},

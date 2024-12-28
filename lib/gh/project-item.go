@@ -265,6 +265,11 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 		fieldIDVar := fmt.Sprintf("$%s_field", fieldAlias)
 		fieldValueVar := fmt.Sprintf("$%s_value", fieldAlias)
 
+		// Validate the field id it can never be empty
+		if f.FieldID == "" {
+			return fmt.Errorf("field ID for %s is empty", fieldAlias)
+		}
+
 		// Variable definitions based on Type
 		varDefs = append(varDefs, fieldIDVar+":ID!")
 		switch f.Type {
@@ -274,14 +279,18 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 			varDefs = append(varDefs, fieldValueVar+":String!")
 		case ItemValueTypeNumber:
 			varDefs = append(varDefs, fieldValueVar+":Float!")
+		case ItemValueTypeDate:
+			varDefs = append(varDefs, fieldValueVar+":Date!")
 		default:
-			return fmt.Errorf("unsupported value type: %v", f.Type)
+			return fmt.Errorf("unsupported value type: %v for %s ", f.Type, fieldAlias)
 		}
 
 		// Add parameters for this field
 		params = append(params, []string{"-f", fmt.Sprintf("%s_field=%s", fieldAlias, f.FieldID)})
 		switch f.Type {
 		case ItemValueTypeText:
+			fallthrough
+		case ItemValueTypeDate:
 			fallthrough
 		case ItemValueTypeSingleSelect:
 			params = append(params, []string{"-f", fmt.Sprintf("%s_value=%v", fieldAlias, f.Value)})
@@ -297,6 +306,8 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 			valuePart = fmt.Sprintf("value: { text: %s }", fieldValueVar)
 		case ItemValueTypeNumber:
 			valuePart = fmt.Sprintf("value: { number: %s }", fieldValueVar)
+		case ItemValueTypeDate:
+			valuePart = fmt.Sprintf("value: { date: %s }", fieldValueVar)
 		case ItemValueTypeSingleSelect:
 			valuePart = fmt.Sprintf("value: { singleSelectOptionId: %s }", fieldValueVar)
 		}
