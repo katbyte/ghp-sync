@@ -1,4 +1,4 @@
-module github.com/katbyte/ghp-repo-sync
+module github.com/katbyte/ghp-sync
 
 go 1.23
 

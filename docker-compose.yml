@@ -1,9 +1,9 @@
 version: "3.6"
 
 services:
-  ghp-repo-sync:
-    image: ghp-repo-sync
-    container_name: ghp-repo-sync
+  ghp-sync:
+    image: ghp-sync
+    container_name: ghp-sync
     environment:
       - "TZ=America/Vancouver"
       - "SYNC_CRON=0 0,3,6,9,12,15,18,21 * * *"

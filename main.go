@@ -4,11 +4,11 @@ import (
 	"os"
 
 	c "github.com/gookit/color" // nolint: misspell
-	"github.com/katbyte/ghp-repo-sync/cli"
-	"github.com/katbyte/ghp-repo-sync/lib/clog"
+	"github.com/katbyte/ghp-sync/cli"
+	"github.com/katbyte/ghp-sync/lib/clog"
 )
 
-const cmdName = "ghp-repo-sync"
+const cmdName = "ghp-sync"
 
 func main() {
 	cmd, err := cli.Make(cmdName)

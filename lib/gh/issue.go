@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"github.com/google/go-github/v45/github"
-	"github.com/katbyte/ghp-repo-sync/lib/clog"
+	"github.com/katbyte/ghp-sync/lib/clog"
 )
 
 func (r Repo) ListAllIssues(state string, cb func([]*github.Issue, *github.Response) error) error {

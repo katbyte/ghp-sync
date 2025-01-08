@@ -2,5 +2,5 @@
 
 echo
 echo "Job started: $(date)"
-ghp-repo-sync "$SYNC_CMD"
+ghp-sync "$SYNC_CMD"
 echo "Job finished: $(date)"

@@ -26,6 +26,10 @@ type Filters struct {
 	Assignees []string
 	LabelsOr  []string
 	LabelsAnd []string
+
+	// todo move this to flags.project.Filters?
+	ProjectStatusIs       string
+	ProjectFieldPopulated []string
 }
 
 type Jira struct {
@@ -75,6 +79,8 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.StringVarP(&flags.Filters.ProjectStatusIs, "project-status-is", "", "", "filter that match project status. ie 'In Progress'")
+	pflags.StringSliceVarP(&flags.Filters.ProjectFieldPopulated, "project-fields-populated", "", []string{}, "filter that match project fields populated. ie 'Due Date'")
 
 	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
@@ -86,6 +92,8 @@ func configureFlags(root *cobra.Command) error {
 		"project-owner":                   "GITHUB_PROJECT_OWNER",
 		"project-number":                  "GITHUB_PROJECT_NUMBER",
 		"include-closed":                  "GITHUB_INCLUDE_CLOSED",
+		"project-status-is":               "GITHUB_PROJECT_STATUS_IS",
+		"project-fields-populated":        "GITHUB_PROJECT_FIELDS_POPULATED",
 		"jira-url":                        "JIRA_URL",
 		"jira-user":                       "JIRA_USER",
 		"jira-jql":                        "JIRA_JQL",
@@ -142,6 +150,10 @@ func GetFlags() FlagData {
 	if len(assignees) > 0 {
 		assignees = strings.Split(assignees[0], ",")
 	}
+	projectFields := viper.GetStringSlice("project-fields-populated")
+	if len(projectFields) > 0 {
+		projectFields = strings.Split(projectFields[0], ",")
+	}
 
 	// custom fields
 	jiraCustomFieldsStr := viper.GetString("jira-custom-fields")
@@ -191,10 +203,12 @@ func GetFlags() FlagData {
 		},
 
 		Filters: Filters{
-			Authors:   authors,
-			Assignees: assignees,
-			LabelsOr:  viper.GetStringSlice("labels-or"),
-			LabelsAnd: viper.GetStringSlice("labels-and"),
+			Authors:               authors,
+			Assignees:             assignees,
+			LabelsOr:              viper.GetStringSlice("labels-or"),
+			LabelsAnd:             viper.GetStringSlice("labels-and"),
+			ProjectStatusIs:       viper.GetString("project-status-is"),
+			ProjectFieldPopulated: projectFields,
 		},
 	}
 }

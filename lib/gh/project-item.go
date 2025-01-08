@@ -69,7 +69,7 @@ func (p *Project) AddItem(nodeID string) (*string, error) {
 }
 
 func (p *Project) SetItemStatus(itemId, status string) error {
-	// should this be a method of ProjectItem? (to do this we'll need to figure out how to get all the fields and vlalues
+	// should this be a method of ProjectItem? (to do this we'll need to figure out how to get all the fields and values
 	//TODO couldn't figure it out today)
 
 	if p.ProjectDetails == nil {
@@ -77,35 +77,11 @@ func (p *Project) SetItemStatus(itemId, status string) error {
 		return fmt.Errorf("project details not loaded yet")
 	}
 
-	q := `query=
-					mutation (
-                      $project:ID!, $item:ID!, 
-                      $status_field:ID!, $status_value:String!,
-					) {
-					  set_status: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $status_field
-						value: { 
-						  singleSelectOptionId: $status_value
-						  }
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					}
-				`
-
-	fields := [][]string{
-		{"-f", "project=" + p.ID},
-		{"-f", "item=" + itemId},
-		{"-f", "status_field=" + p.FieldIDs["Status"]},
-		{"-f", "status_value=" + p.StatusIDs[status]},
+	fields := []ProjectItemField{
+		{Name: "number", FieldID: p.FieldIDs["Status"], Type: ItemValueTypeSingleSelect, Value: status},
 	}
 
-	_, err := p.GraphQLQuery(q, fields)
-	return err
+	return p.UpdateItem(itemId, fields)
 }
 
 // for not we hard code the project fields we want (dueDate and type)
@@ -117,8 +93,11 @@ type ProjectItemsResult struct {
 				ID    string `json:"id"`
 				Items struct {
 					Nodes []struct {
-						ID          string `json:"id"`
-						Type        string `json:"type"`
+						ID     string `json:"id"`
+						Type   string `json:"type"`
+						Status *struct {
+							SingleSelectOptionID string `json:"singleSelectOptionId"`
+						}
 						RequestType *struct {
 							Text string `json:"text"`
 						} `json:"requestType"`
@@ -144,7 +123,13 @@ type ProjectItem struct {
 	URL         string
 	RequestType string
 	DueDate     string
+	Status      string
 	NodeID      string // actual pr/issue node id
+}
+
+type ProjectItemFieldNameAndType struct {
+	Name string        // The field name as it appears in GitHub's Project
+	Type ItemValueType // The field type
 }
 
 // todo: allow configure the fields we want to get
@@ -169,6 +154,11 @@ func (p *Project) GetItems() ([]ProjectItem, error) {
              						date
            						}
       						}
+							status:fieldValueByName(name:"Status") {
+								... on ProjectV2ItemFieldSingleSelectValue {
+									singleSelectOptionId		
+								}	
+							}		
 							content {
 								... on Issue {
 									id
@@ -208,6 +198,9 @@ func (p *Project) GetItems() ([]ProjectItem, error) {
 			NodeID: i.Content.ID,
 		}
 
+		if i.Status != nil {
+			item.Status = i.Status.SingleSelectOptionID
+		}
 		if i.RequestType != nil {
 			item.RequestType = i.RequestType.Text
 		}

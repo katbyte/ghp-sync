@@ -29,10 +29,10 @@ test: build
 
 build:
 	@echo "==> building..."
-	go build -ldflags "-X github.com/katbyte/ghp-repo-sync/lib/version.GitCommit=${GIT_COMMIT}"
+	go build -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT}"
 
 docker:
-	docker build --network=host --tag ghp-repo-sync .
+	docker build --network=host --tag ghp-sync .
 
 goimports:
 	@echo "==> Fixing imports code with goimports..."
@@ -54,7 +54,7 @@ depscheck:
 
 install:
 	@echo "==> installing..."
-	go install -ldflags "-X github.com/katbyte/ghp-repo-sync/lib/version.GitCommit=${GIT_COMMIT}" .
+	go install -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT}" .
 
 check-all: build test lint depscheck
 

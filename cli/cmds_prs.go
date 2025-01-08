@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v45/github"
-	"github.com/katbyte/ghp-repo-sync/lib/gh"
+	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/spf13/cobra"
 
 	//nolint:misspell

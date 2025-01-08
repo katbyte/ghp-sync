@@ -7,7 +7,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/katbyte/ghp-repo-sync/lib/clog"
+	"github.com/katbyte/ghp-sync/lib/clog"
 )
 
 var HTTP = http.DefaultClient

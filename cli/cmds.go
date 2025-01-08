@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/katbyte/ghp-repo-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project & jira <> gh TODO yes we should
+	"github.com/katbyte/ghp-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project & jira <> gh TODO yes we should
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,7 +28,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("USAGE: ghp-repo-syc [issues|prs] katbyte/ghp-repo-sync project")
+			fmt.Println("USAGE: ghp-repo-syc [issues|prs] katbyte/ghp-sync project")
 
 			return nil
 		},

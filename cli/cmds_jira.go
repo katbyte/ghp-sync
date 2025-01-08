@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 	"github.com/ctreminiom/go-atlassian/v2/pkg/infra/models"
-	"github.com/katbyte/ghp-repo-sync/lib/gh"
-	"github.com/katbyte/ghp-repo-sync/lib/j"
+	"github.com/katbyte/ghp-sync/lib/gh"
+	"github.com/katbyte/ghp-sync/lib/j"
 	"github.com/spf13/cobra"
 	"strings"
 	"time"
