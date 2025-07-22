@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v45/github"
 	"github.com/katbyte/ghp-sync/lib/gh"
+	"github.com/shurcooL/githubv4"
 	"github.com/spf13/cobra"
 
 	//nolint:misspell
@@ -38,7 +38,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 
-	// for reach repo, get all prs, and add to project
+	// for each repo, get all prs, and add to project
 	for _, repo := range f.Repos {
 		r, err := gh.NewRepo(repo, f.Token)
 		if err != nil {
@@ -48,26 +48,24 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 		// get all pull requests
 		c.Printf("Retrieving all prs for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
-		prs, err := r.GetAllPullRequests("open")
+		prs, err := r.GetAllPullRequestsGQL(githubv4.PullRequestStateOpen)
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			return nil
 		}
 		c.Printf(" found <yellow>%d</>\n", len(*prs))
 
-		//filter them
 		prs = FilterByFlags(f, prs)
 
 		byStatus := map[string][]int{}
 
-		totalWaiting := 0
-		totalDaysWaiting := 0
+		var totalWaiting, totalDaysWaiting int
 
 		for _, pr := range *prs {
-			prNode := *pr.NodeID
+			prNode := pr.NodeID
 
 			// flat := strings.Replace(strings.Replace(q, "\n", " ", -1), "\t", "", -1)
-			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.GetNumber(), prNode)
+			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.Number, prNode)
 			iid, err := p.AddItem(prNode)
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
@@ -75,93 +73,76 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			}
 			c.Printf("<magenta>%s</>", *iid)
 
-			// figure out status
-			// TODO if approved make sure it stays approved
-			reviews, err := r.PRReviewDecision(pr.GetNumber())
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s", err)
-				continue
-			}
-
-			daysOpen := int(time.Since(pr.GetCreatedAt()) / (time.Hour * 24))
+			daysOpen := int(time.Since(pr.CreatedAt) / (time.Hour * 24))
 			daysWaiting := 0
 
-			status := ""
-			statusText := ""
-			// nolint: gocritic
-			if *reviews == "APPROVED" {
+			var status, statusText string
+			switch {
+			// TODO if approved make sure it stays approved
+			case pr.ReviewDecision == "APPROVED":
 				statusText = "Approved"
 				c.Printf("  <blue>Approved</> <gray>(reviews)</>\n")
-			} else if pr.GetState() == "closed" {
+			case pr.State == "closed": // We filter by open PRs so pr.State should never be `closed`?
 				statusText = "Closed"
-				daysOpen = int(pr.GetClosedAt().Sub(pr.GetCreatedAt()) / (time.Hour * 24))
+				daysOpen = int(pr.ClosedAt.Sub(pr.CreatedAt) / (time.Hour * 24))
 				c.Printf("  <darkred>Closed</> <gray>(state)</>\n")
-			} else if pr.Milestone != nil && *pr.Milestone.Title == "Blocked" {
+			case pr.Milestone == "Blocked":
 				statusText = "Blocked"
 				c.Printf("  <red>Blocked</> <gray>(milestone)</>\n")
-			} else if pr.GetDraft() {
+			case pr.Draft:
 				statusText = "In Progress"
 				c.Printf("  <yellow>In Progress</> <gray>(draft)</>\n")
-			} else if pr.GetState() == "" {
+			case pr.State == "":
 				statusText = "In Progress"
-				c.Printf("  <yellow>In Progress</> <gray>(state)</>\n")
-			} else {
-				for _, l := range pr.Labels {
-					if l != nil {
-						if *l.Name == "waiting-response" {
-							statusText = "Waiting for Response"
-							c.Printf("  <lightGreen>Waiting for Response</> <gray>(label)</>\n")
+				c.Printf("  <yellow>In Progress</> <gray>(draft)</>\n")
+			case pr.AssociatedLabels["waiting-response"]:
+				statusText = "Waiting for Response"
+				c.Printf("  <lightGreen>Waiting for Response</> <gray>(label)</>\n")
+			default:
+				statusText = "Waiting for Review"
+				c.Printf("  <green>Waiting for Review</> <gray>(default)</>")
+
+				// calculate days waiting
+				daysWaiting = daysOpen
+				totalWaiting++
+
+				events, err := r.GetAllIssueEvents(pr.Number)
+				if err != nil {
+					c.Printf("\n\n <red>ERROR!!</> %s\n", err)
+					return nil
+				}
+				c.Printf(" with <magenta>%d</> events\n", len(*events))
+
+				for _, t := range *events {
+					// check for waiting response label removed
+					if t.GetEvent() == "unlabeled" {
+						if t.Label.GetName() == "waiting-response" {
+							daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
+							break
+						}
+					}
+
+					// check for blocked milestone removal
+					if t.GetEvent() == "unlabeled" {
+						if t.Milestone.GetTitle() == "Blocked" {
+							daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
 							break
 						}
 					}
 				}
 
-				if statusText == "" {
-					statusText = "Waiting for Review"
-					c.Printf("  <green>Waiting for Review</> <gray>(default)</>")
-
-					// calculate days waiting
-					daysWaiting = daysOpen
-					totalWaiting++
-
-					events, err := r.GetAllIssueEvents(*pr.Number)
-					if err != nil {
-						c.Printf("\n\n <red>ERROR!!</> %s\n", err)
-						return nil
-					}
-					c.Printf(" with <magenta>%d</> events\n", len(*events))
-
-					for _, t := range *events {
-						// check for waiting response label removed
-						if t.GetEvent() == "unlabeled" {
-							if t.Label.GetName() == "waiting-response" {
-								daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
-								break
-							}
-						}
-
-						// check for blocked milestone removal
-						if t.GetEvent() == "unlabeled" {
-							if t.Milestone.GetTitle() == "Blocked" {
-								daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
-								break
-							}
-						}
-					}
-
-					totalDaysWaiting = totalDaysWaiting + daysWaiting
-				}
+				totalDaysWaiting = totalDaysWaiting + daysWaiting
 			}
 
 			status = p.StatusIDs[statusText]
-			byStatus[statusText] = append(byStatus[statusText], pr.GetNumber())
+			byStatus[statusText] = append(byStatus[statusText], pr.Number)
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
 
 			fields := []gh.ProjectItemField{
-				{Name: "number", FieldID: p.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: *pr.Number},
+				{Name: "number", FieldID: p.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: pr.Number},
 				{Name: "status", FieldID: p.FieldIDs["Status"], Type: gh.ItemValueTypeSingleSelect, Value: status},
-				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.User.GetLogin()},
+				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.Author},
 				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
 				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
 			}
@@ -188,7 +169,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func FilterByFlags(f FlagData, prs *[]github.PullRequest) *[]github.PullRequest {
+func FilterByFlags(f FlagData, prs *[]gh.PullRequest) *[]gh.PullRequest {
 	if len(f.Filters.Authors) == 0 && len(f.Filters.Assignees) == 0 {
 		return prs
 	}
@@ -207,18 +188,23 @@ func FilterByFlags(f FlagData, prs *[]github.PullRequest) *[]github.PullRequest 
 		assigneeUserMap[u] = true
 	}
 
-	var filteredPRs []github.PullRequest
+	var filteredPRs []gh.PullRequest
 	for _, pr := range *prs {
 		add := false
 
-		if authorMap[pr.User.GetLogin()] {
+		if pr.AssociatedProjectNumbers[f.ProjectNumber] {
 			add = true
 		}
 
-		for _, a := range pr.Assignees {
-			if assigneeUserMap[a.GetLogin()] {
-				filteredPRs = append(filteredPRs, pr)
-				break
+		if !add && authorMap[pr.Author] {
+			add = true
+		}
+
+		if !add {
+			for _, a := range pr.Assignees {
+				if assigneeUserMap[a] {
+					add = true
+				}
 			}
 		}
 
@@ -228,12 +214,12 @@ func FilterByFlags(f FlagData, prs *[]github.PullRequest) *[]github.PullRequest 
 	}
 
 	sort.Slice(filteredPRs, func(i, j int) bool {
-		return filteredPRs[i].GetNumber() < filteredPRs[j].GetNumber()
+		return filteredPRs[i].Number < filteredPRs[j].Number
 	})
 
 	c.Printf("  Found <lightBlue>%d</> filtered PRs: ", len(filteredPRs))
 	for _, pr := range filteredPRs {
-		c.Printf("<white>%d</>,", pr.GetNumber())
+		c.Printf("<white>%d</>,", pr.Number)
 	}
 	c.Printf("\n\n")
 

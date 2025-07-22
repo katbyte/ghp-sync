@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/katbyte/ghp-sync/lib/clog"
 	"github.com/katbyte/ghp-sync/lib/pointer"
+	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 	"net/http"
 	"strconv"
@@ -93,6 +94,20 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	}
 
 	return github.NewClient(retryClient.StandardClient()), ctx
+}
+
+func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context) {
+	ctx := context.Background()
+
+	if t.Token == nil {
+		// err?
+	}
+
+	tok := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: *t.Token},
+	)
+
+	return githubv4.NewClient(oauth2.NewClient(ctx, tok)), ctx
 }
 
 type PRApproval struct {
