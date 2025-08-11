@@ -158,8 +158,7 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 		// Only add review count if `reviewers` filter was provided
 		// TODO: do we want separate fields, e.g. TotalReviews and TotalFilteredReviews?
 		for _, review := range pullRequest.Reviews.Nodes {
-			_, ok := reviewers[review.Author.Login]
-			if ok {
+			if _, ok := reviewers[review.Author.Login]; ok {
 				pr.TotalReviewCount++
 			}
 		}

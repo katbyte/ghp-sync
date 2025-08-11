@@ -100,7 +100,7 @@ func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context) {
 	ctx := context.Background()
 
 	if t.Token == nil {
-		// err?
+		// TODO do we want to error here? `NewClient()` above does not, but requests made by this client will fail without a token
 	}
 
 	tok := oauth2.StaticTokenSource(
