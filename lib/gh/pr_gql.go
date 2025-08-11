@@ -19,6 +19,7 @@ type PullRequest struct {
 	Draft              bool
 	Milestone          string
 	TotalCommentsCount int
+	TotalReviewCount   int
 
 	Assignees                []string
 	AssociatedLabels         map[string]bool
@@ -60,6 +61,14 @@ type pullRequestsQuery struct {
 					Title string
 				}
 
+				Reviews struct {
+					Nodes []struct {
+						Author struct {
+							Login string
+						}
+					}
+				} `graphql:"reviews(first: 100)"`
+
 				ProjectItems struct {
 					Nodes []struct {
 						Project struct {
@@ -77,10 +86,17 @@ type pullRequestsQuery struct {
 	} `graphql:"repository(owner: $owner, name: $repository)"`
 }
 
-func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState) (*[]PullRequest, error) {
+func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers []string) (*[]PullRequest, error) {
 	client, ctx := r.NewGraphQLClient()
 
 	allPRs := make([]PullRequest, 0)
+
+	rev := make(map[string]struct{})
+	if len(reviewers) != 0 {
+		for _, reviewer := range reviewers {
+			rev[reviewer] = struct{}{}
+		}
+	}
 
 	query := pullRequestsQuery{}
 	variables := map[string]any{
@@ -95,7 +111,7 @@ func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState) (*[]PullReq
 			return nil, err
 		}
 
-		allPRs = append(allPRs, query.flatten()...)
+		allPRs = append(allPRs, query.flatten(rev)...)
 
 		if !query.Repository.PullRequests.PageInfo.HasNextPage {
 			break
@@ -106,7 +122,7 @@ func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState) (*[]PullReq
 	return &allPRs, nil
 }
 
-func (q pullRequestsQuery) flatten() []PullRequest {
+func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest {
 	result := make([]PullRequest, 0)
 
 	for _, pullRequest := range q.Repository.PullRequests.Nodes {
@@ -137,6 +153,15 @@ func (q pullRequestsQuery) flatten() []PullRequest {
 
 		for _, label := range pullRequest.Labels.Nodes {
 			pr.AssociatedLabels[label.Name] = true
+		}
+
+		// Only add review count if `reviewers` filter was provided
+		// TODO: do we want separate fields, e.g. TotalReviews and TotalFilteredReviews?
+		for _, review := range pullRequest.Reviews.Nodes {
+			_, ok := reviewers[review.Author.Login]
+			if ok {
+				pr.TotalReviewCount++
+			}
 		}
 
 		result = append(result, pr)

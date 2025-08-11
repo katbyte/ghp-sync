@@ -48,7 +48,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 		// get all pull requests
 		c.Printf("Retrieving all prs for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
-		prs, err := r.GetAllPullRequestsGQL(githubv4.PullRequestStateOpen)
+		prs, err := r.GetAllPullRequestsGQL(githubv4.PullRequestStateOpen, f.Filters.Reviewers)
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			return nil
@@ -140,11 +140,16 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
 
 			fields := []gh.ProjectItemField{
-				{Name: "number", FieldID: p.FieldIDs["#"], Type: gh.ItemValueTypeNumber, Value: pr.Number},
+				{Name: "number", FieldID: p.FieldIDs["PR#"], Type: gh.ItemValueTypeNumber, Value: pr.Number},
 				{Name: "status", FieldID: p.FieldIDs["Status"], Type: gh.ItemValueTypeSingleSelect, Value: status},
 				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.Author},
 				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
 				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
+				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentsCount},
+			}
+
+			if pr.TotalReviewCount > 0 {
+				fields = append(fields, gh.ProjectItemField{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},)
 			}
 
 			err = p.UpdateItem(*iid, fields)

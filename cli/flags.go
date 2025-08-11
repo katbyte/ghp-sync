@@ -24,6 +24,7 @@ type FlagData struct {
 type Filters struct {
 	Authors   []string
 	Assignees []string
+	Reviewers []string
 	LabelsOr  []string
 	LabelsAnd []string
 
@@ -77,6 +78,7 @@ func configureFlags(root *cobra.Command) error {
 
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
+	pflags.StringSliceVar(&flags.Filters.Reviewers, "reviewers", []string{}, "retrieves number of reviews filtered by these users. ie 'katbyte,reviewer2,reviewer3'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringVarP(&flags.Filters.ProjectStatusIs, "project-status-is", "", "", "filter that match project status. ie 'In Progress'")
@@ -104,6 +106,7 @@ func configureFlags(root *cobra.Command) error {
 		"jira-custom-fields":              "JIRA_CUSTOM_FIELDS",
 		"authors":                         "GITHUB_AUTHORS",
 		"assignees":                       "GITHUB_ASSIGNEES",
+		"reviewers":                       "GITHUB_REVIEWERS",
 		"labels-or":                       "GITHUB_LABELS_OR",
 		"labels-and":                      "GITHUB_LABELS_AND",
 		"dry-run":                         "",
@@ -150,6 +153,10 @@ func GetFlags() FlagData {
 	if len(assignees) > 0 {
 		assignees = strings.Split(assignees[0], ",")
 	}
+	reviewers := viper.GetStringSlice("reviewers")
+	if len(reviewers) > 0 {
+		reviewers = strings.Split(reviewers[0], ",")
+	}
 	projectFields := viper.GetStringSlice("project-fields-populated")
 	if len(projectFields) > 0 {
 		projectFields = strings.Split(projectFields[0], ",")
@@ -157,7 +164,7 @@ func GetFlags() FlagData {
 
 	// custom fields
 	jiraCustomFieldsStr := viper.GetString("jira-custom-fields")
-	jiraCustomFields := []JiraCustomFields{}
+	jiraCustomFields := make([]JiraCustomFields, 0)
 	if jiraCustomFieldsStr != "" {
 		fields := strings.Split(jiraCustomFieldsStr, ",")
 		for _, cf := range fields {
@@ -205,6 +212,7 @@ func GetFlags() FlagData {
 		Filters: Filters{
 			Authors:               authors,
 			Assignees:             assignees,
+			Reviewers:             reviewers,
 			LabelsOr:              viper.GetStringSlice("labels-or"),
 			LabelsAnd:             viper.GetStringSlice("labels-and"),
 			ProjectStatusIs:       viper.GetString("project-status-is"),
