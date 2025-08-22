@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v45/github"
-	c "github.com/gookit/color" //nolint:misspell
+	c "github.com/gookit/color"
 )
 
 type Filter struct {
@@ -33,6 +33,7 @@ func (f FlagData) GetFilters() []Filter {
 
 	return filters
 }
+
 func GetFilterForLabelsOr(labels []string) *Filter {
 	return GetFilterForLabels(labels, false)
 }
@@ -86,7 +87,7 @@ func GetFilterForLabels(labels []string, and bool) *Filter {
 			for filterLabel, negate := range filterLabelMap {
 				_, found := labelMap[filterLabel]
 
-				// nolint:gocritic
+				//nolint:gocritic
 				if found && !negate {
 					orPass = true
 					c.Printf(" <green>%s</>", filterLabel)

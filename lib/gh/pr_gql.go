@@ -91,7 +91,7 @@ type pullRequestsQuery struct {
 func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers []string) (*[]PullRequest, error) {
 	client, ctx, err := r.NewGraphQLClient()
 	if err != nil {
-		return nil, fmt.Errorf("instantiating GraphQL client: %+v", err)
+		return nil, fmt.Errorf("instantiating GraphQL client: %w", err)
 	}
 
 	allPRs := make([]PullRequest, 0)

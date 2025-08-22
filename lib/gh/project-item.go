@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,12 +10,12 @@ import (
 func (p *Project) HasItem(nodeID string) (*bool, error) {
 	if p.ProjectDetails == nil {
 		// todo should we do this automatically or error?
-		return nil, fmt.Errorf("project details not loaded yet")
+		return nil, errors.New("project details not loaded yet")
 	}
 
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 
-	//couldn't get this to work
+	// couldn't get this to work
 	/*q := `query=
 	        query($project:ID!, $pr:ID!) {
 	          projectV2(id: $project) {
@@ -46,7 +47,7 @@ func (p *Project) HasItem(nodeID string) (*bool, error) {
 func (p *Project) AddItem(nodeID string) (*string, error) {
 	if p.ProjectDetails == nil {
 		// todo should we do this automatically or error?
-		return nil, fmt.Errorf("project details not loaded yet")
+		return nil, errors.New("project details not loaded yet")
 	}
 
 	q := `query=
@@ -70,11 +71,11 @@ func (p *Project) AddItem(nodeID string) (*string, error) {
 
 func (p *Project) SetItemStatus(itemId, status string) error {
 	// should this be a method of ProjectItem? (to do this we'll need to figure out how to get all the fields and values
-	//TODO couldn't figure it out today)
+	// TODO couldn't figure it out today)
 
 	if p.ProjectDetails == nil {
 		// todo should we do this automatically or error?
-		return fmt.Errorf("project details not loaded yet")
+		return errors.New("project details not loaded yet")
 	}
 
 	fields := []ProjectItemField{
@@ -188,8 +189,9 @@ func (p *Project) GetItems() ([]ProjectItem, error) {
 		return nil, err
 	}
 
-	var items []ProjectItem
-	for _, i := range result.Data.Organization.ProjectV2.Items.Nodes {
+	nodes := result.Data.Organization.ProjectV2.Items.Nodes
+	items := make([]ProjectItem, len(nodes))
+	for _, i := range nodes {
 		item := ProjectItem{
 			ID:     i.ID,
 			Type:   i.Type,
@@ -235,25 +237,20 @@ type ProjectItemField struct {
 
 // UpdateItem updates the fields of a project item by building a dynamic GraphQL mutation.
 func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
-
-	// We'll build the mutation parts dynamically.
-	var (
-		varDefs  []string // For defining variables in the mutation signature
-		setCalls []string // For the field update calls inside the mutation
-		params   [][]string
-	)
-
-	// Always include project and item as variables
-	varDefs = append(varDefs, "$project:ID!", "$item:ID!")
-	params = append(params, []string{"-f", "project=" + p.ID})
-	params = append(params, []string{"-f", "item=" + itemID})
+	// We'll build the mutation parts dynamically; Always include project and item as variables
+	varDefs := []string{"$project:ID!", "$item:ID!"}
+	setCalls := []string{}
+	params := [][]string{
+		{"-f", "project=" + p.ID},
+		{"-f", "item=" + itemID},
+	}
 
 	// For each field, we create a pair of variables: one for the fieldId, and one for the value
 	// We'll name them based on the field's index to ensure uniqueness.
 	for _, f := range fields {
 		fieldAlias := f.Name
 		if fieldAlias == "" {
-			return fmt.Errorf("field name cannot be empty")
+			return errors.New("field name cannot be empty")
 		}
 		fieldIDVar := fmt.Sprintf("$%s_field", fieldAlias)
 		fieldValueVar := fmt.Sprintf("$%s_value", fieldAlias)
@@ -325,7 +322,7 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 
 	out, err := p.GraphQLQuery(mutation, params)
 	if err != nil {
-		return fmt.Errorf("error updating project item: %s: %s", err, out)
+		return fmt.Errorf("error updating project item: %w: %s", err, *out)
 	}
 
 	return nil

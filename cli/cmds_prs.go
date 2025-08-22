@@ -10,7 +10,6 @@ import (
 	"github.com/shurcooL/githubv4"
 	"github.com/spf13/cobra"
 
-	//nolint:misspell
 	c "github.com/gookit/color"
 )
 
@@ -131,7 +130,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					}
 				}
 
-				totalDaysWaiting = totalDaysWaiting + daysWaiting
+				totalDaysWaiting += daysWaiting
 			}
 
 			status = p.StatusIDs[statusText]
@@ -169,9 +168,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			c.Printf("<cyan>%s</><gray>x%d -</> %s\n", k, len(byStatus[k]), strings.Trim(strings.ReplaceAll(fmt.Sprint(byStatus[k]), " ", ","), "[]"))
 		}
 		c.Printf("\n")
-
 	}
-
 	return nil
 }
 

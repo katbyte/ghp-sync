@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/spf13/cobra"
-	"strconv"
-	//nolint:misspell
+
 	c "github.com/gookit/color"
 )
 
@@ -64,7 +65,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 			continue
 		}
 
-		//TODO filters - now we only want ones with status X
+		// TODO filters - now we only want ones with status X
 
 		// parse the url (todo handle issues?)
 		owner, name, _, number, err := gh.ParseGitHubURL(srcItem.URL)
@@ -87,7 +88,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 		}
 
 		nodeID := *pr.NodeID
-		dstItemId := ""
+		var dstItemId string
 		c.Printf("<blue>%s</>/<lightBlue>%s</>#<lightCyan>%d</> \n", owner, name, pr.GetNumber())
 		if di, ok := dstItemNodeIDMap[nodeID]; ok {
 			c.Printf("  already exists, ")
@@ -108,6 +109,11 @@ func CmdSync(_ *cobra.Command, args []string) error {
 				c.Printf("\n\n <red>ERROR!!</> %s", err)
 				continue
 			}
+		}
+
+		if dstItemId == "" {
+			c.Printf("\n\n <red>ERROR!!</> no item ID found for %s, skipping\n", srcItem.NodeID)
+			continue
 		}
 
 		// update the other fields

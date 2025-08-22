@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/google/go-github/v45/github"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/katbyte/ghp-sync/lib/clog"
 	"github.com/katbyte/ghp-sync/lib/pointer"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type Token struct {
@@ -61,7 +62,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	retryClient.Logger = clog.Log
 
 	// github is.. special using 403 instead of 429 for rate limiting so we need to handle that here :(
-	retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	retryClient.Backoff = func(minimum, maximum time.Duration, attemptNum int, resp *http.Response) time.Duration {
 		if resp != nil && resp.StatusCode == 403 {
 			// get x-rate-limit-reset header
 			reset := resp.Header.Get("x-ratelimit-reset")
@@ -69,7 +70,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 				i, err := strconv.ParseInt(reset, 10, 64)
 				if err == nil {
 					utime := time.Unix(i, 0)
-					wait := utime.Sub(time.Now()) + time.Minute // add an extra min to be safe
+					wait := time.Until(utime) + time.Minute // add an extra min to be safe
 					clog.Log.Errorf("ratelimited, parsed x-ratelimit-reset, waiting for %s", wait.String())
 					return wait
 				}
@@ -77,7 +78,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 			}
 		}
 
-		return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
+		return retryablehttp.DefaultBackoff(minimum, maximum, attemptNum, resp)
 	}
 	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 		if resp.StatusCode == 403 {

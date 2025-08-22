@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	c "github.com/gookit/color" // nolint: misspell
+	c "github.com/gookit/color"
 	"github.com/katbyte/ghp-sync/cli"
 	"github.com/katbyte/ghp-sync/lib/clog"
 )

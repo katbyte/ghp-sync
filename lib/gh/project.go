@@ -5,9 +5,7 @@ import (
 )
 
 //
-// TODO
 // TODO - look for an actual SDK for github projects v2
-// TODO
 //
 
 type Project struct {

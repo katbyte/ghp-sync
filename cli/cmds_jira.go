@@ -2,14 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctreminiom/go-atlassian/v2/pkg/infra/models"
 	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/katbyte/ghp-sync/lib/j"
 	"github.com/spf13/cobra"
-	"strings"
-	"time"
 
-	//nolint:misspell
 	c "github.com/gookit/color"
 )
 
@@ -56,7 +56,7 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 	err = jira.ListAllIssues(f.Jira.JQL, &fields, &expand, func(results *models.IssueSearchScheme, resp *models.ResponseScheme) error {
 		c.Printf("<magenta>%d</>-<lightMagenta>%d</> <darkGray>of %d</>\n", results.StartAt, results.MaxResults, results.Total)
 
-		//custom fields need to be loaded from the response
+		// custom fields need to be loaded from the response
 		issueLinks, err := models.ParseStringCustomFields(resp.Bytes, f.Jira.IssueLinkCustomFieldID)
 		if err != nil {
 			return fmt.Errorf("failed to parse issue links: %w", err)
@@ -65,7 +65,8 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 		// there has to be a better way
 		issueCustomFieldValues := map[string]map[string]interface{}{}
 		for _, cf := range f.Jira.CustomFields {
-			if cf.Type == "user-display-name" {
+			switch strings.ToLower(cf.Type) {
+			case "user-display-name":
 				rawValues, err := models.ParseUserPickerCustomFields(resp.Bytes, cf.ID)
 				if err != nil {
 					return fmt.Errorf("failed to parse %s: %w", cf.Name, err)
@@ -76,7 +77,7 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 					values[k] = v.DisplayName
 				}
 				issueCustomFieldValues[cf.ID] = values
-			} else if cf.Type == "number" {
+			case "number":
 				rawValues, err := models.ParseFloatCustomFields(resp.Bytes, cf.ID)
 				if err != nil {
 					return fmt.Errorf("failed to parse %s: %w", cf.Name, err)
@@ -87,7 +88,7 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 					values[k] = v
 				}
 				issueCustomFieldValues[cf.ID] = values
-			} else {
+			default:
 				return fmt.Errorf("unsupported custom field type %s", cf.Type)
 			}
 		}
@@ -158,10 +159,13 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 
 			for _, cf := range f.Jira.CustomFields {
 				if v, ok := issueCustomFieldValues[cf.ID][jiraIssue.Key]; ok {
-					if cf.Type == "user-display-name" {
+					switch cf.Type {
+					case "user-display-name":
 						fields = append(fields, gh.ProjectItemField{Name: cf.Name, FieldID: p.FieldIDs[cf.Name], Type: gh.ItemValueTypeText, Value: v})
-					} else if cf.Type == "number" {
+					case "number":
 						fields = append(fields, gh.ProjectItemField{Name: cf.Name, FieldID: p.FieldIDs[cf.Name], Type: gh.ItemValueTypeNumber, Value: int(v.(float64))})
+					default:
+						c.Printf("\n\n <red>ERROR!!</> unsupported custom field type %s for %s", cf.Type, cf.Name)
 					}
 				}
 			}
@@ -177,7 +181,6 @@ func CmdJIRA(_ *cobra.Command, _ []string) error {
 
 		return nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to list issues for %s @ %s: %w", jira.URL, f.Jira.JQL, err)
 	}
