@@ -50,7 +50,7 @@ linters:
         - io.Close
     nakedret:
       max-func-lines: 30
-    misspell:
+    #misspell:
       #locale: "uk"
     tagalign:
       sort: true
