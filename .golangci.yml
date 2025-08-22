@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   timeout: 60m
@@ -44,22 +44,21 @@ linters:
     - unparam # reports unused function parameters.
     - wastedassign # finds wasted assignment statements
     - whitespace # checks for unnecessary newlines at the start and end of functions, if, for, etc. (
+  settings:
+    errcheck:
+      exclude-functions:
+        - io.Close
+    nakedret:
+      max-func-lines: 30
+    misspell:
+      #locale: "uk"
+    tagalign:
+      sort: true
+    predeclared:
+      ignore: ["new","min","max"] # should we use newer, minimum, and maximum instead?
 
 formatters:
   enable:
     - gofmt # checks whether code was gofmt-ed
     - gofumpt # checks whether code was gofumpt-ed, a stricter gofmt
     - goimports # check import statements are formatted according to the 'goimport' command
-
-linters-settings:
-  errcheck:
-    exclude-functions:
-      - io.Close
-  nakedret:
-    max-func-lines: 30
-  misspell:
-    locale: uk
-  tagalign:
-    sort: true
-  predeclared:
-    ignore: new,min,max # should we use newer, minimum, and maximum instead?

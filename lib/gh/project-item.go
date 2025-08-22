@@ -135,7 +135,6 @@ type ProjectItemFieldNameAndType struct {
 
 // todo: allow configure the fields we want to get
 func (p *Project) GetItems() ([]ProjectItem, error) {
-	// nolint: misspell
 	q := `query=
 		query($org: String!, $number: Int!) {
 			organization(login: $org) {

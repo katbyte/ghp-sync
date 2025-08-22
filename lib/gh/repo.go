@@ -62,7 +62,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	retryClient.Logger = clog.Log
 
 	// github is.. special using 403 instead of 429 for rate limiting so we need to handle that here :(
-	retryClient.Backoff = func(minimum, maximum time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
 		if resp != nil && resp.StatusCode == 403 {
 			// get x-rate-limit-reset header
 			reset := resp.Header.Get("x-ratelimit-reset")
@@ -78,7 +78,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 			}
 		}
 
-		return retryablehttp.DefaultBackoff(minimum, maximum, attemptNum, resp)
+		return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
 	}
 	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 		if resp.StatusCode == 403 {

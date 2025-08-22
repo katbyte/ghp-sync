@@ -48,7 +48,7 @@ type ProjectDetails struct {
 
 type ProjectDetailsResult struct {
 	Data struct {
-		Organization struct { // nolint: misspell
+		Organization struct {
 			ProjectV2 struct {
 				ID     string `json:"id"`
 				Fields struct {
@@ -67,7 +67,6 @@ type ProjectDetailsResult struct {
 }
 
 func (p *Project) LoadDetails() error {
-	// nolint: misspell
 	q := `query=
         query($org: String!, $number: Int!) {
             organization(login: $org){
