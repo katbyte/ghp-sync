@@ -7,6 +7,7 @@ require (
 	github.com/google/go-github/v45 v45.2.0
 	github.com/gookit/color v1.5.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
@@ -24,6 +25,7 @@ require (
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
