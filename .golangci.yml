@@ -10,7 +10,6 @@ issues:
   max-same-issues: 0
 
 linters:
-  disable-all: true
   enable:
     - asasalint # check for pass []any as any in variadic func(...any)
     - asciicheck # ensure code does not contain non-ASCII identifiers
