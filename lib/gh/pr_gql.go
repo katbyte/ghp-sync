@@ -1,25 +1,27 @@
 package gh
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shurcooL/githubv4"
 )
 
 type PullRequest struct {
-	NodeID             string
-	Author             string
-	Number             int
-	Title              string
-	State              string
-	ReviewDecision     string
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	ClosedAt           time.Time
-	Draft              bool
-	Milestone          string
-	TotalCommentsCount int
-	TotalReviewCount   int
+	NodeID              string
+	Author              string
+	Number              int
+	Title               string
+	State               string
+	ReviewDecision      string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	ClosedAt            time.Time
+	Draft               bool
+	Milestone           string
+	TotalCommentsCount  int
+	TotalReviewCount    int
+	FilteredReviewCount int
 
 	Assignees                []string
 	AssociatedLabels         map[string]bool
@@ -87,7 +89,10 @@ type pullRequestsQuery struct {
 }
 
 func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers []string) (*[]PullRequest, error) {
-	client, ctx := r.NewGraphQLClient()
+	client, ctx, err := r.NewGraphQLClient()
+	if err != nil {
+		return nil, fmt.Errorf("instantiating GraphQL client: %+v", err)
+	}
 
 	allPRs := make([]PullRequest, 0)
 
@@ -155,11 +160,12 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 			pr.AssociatedLabels[label.Name] = true
 		}
 
-		// Only add review count if `reviewers` filter was provided
-		// TODO: do we want separate fields, e.g. TotalReviews and TotalFilteredReviews?
 		for _, review := range pullRequest.Reviews.Nodes {
+			pr.TotalReviewCount++
+
+			// Only add filtered review count if `reviewers` filter was provided
 			if _, ok := reviewers[review.Author.Login]; ok {
-				pr.TotalReviewCount++
+				pr.FilteredReviewCount++
 			}
 		}
 

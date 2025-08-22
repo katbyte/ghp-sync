@@ -2,6 +2,7 @@ package gh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/go-github/v45/github"
 	"github.com/hashicorp/go-retryablehttp"
@@ -96,18 +97,18 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	return github.NewClient(retryClient.StandardClient()), ctx
 }
 
-func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context) {
+func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 	ctx := context.Background()
 
 	if t.Token == nil {
-		// TODO do we want to error here? `NewClient()` above does not, but requests made by this client will fail without a token
+		return nil, ctx, errors.New("no GitHub token provided")
 	}
 
 	tok := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: *t.Token},
 	)
 
-	return githubv4.NewClient(oauth2.NewClient(ctx, tok)), ctx
+	return githubv4.NewClient(oauth2.NewClient(ctx, tok)), ctx, nil
 }
 
 type PRApproval struct {

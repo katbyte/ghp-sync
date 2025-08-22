@@ -78,7 +78,7 @@ func configureFlags(root *cobra.Command) error {
 
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
-	pflags.StringSliceVar(&flags.Filters.Reviewers, "reviewers", []string{}, "retrieves number of reviews filtered by these users. ie 'katbyte,reviewer2,reviewer3'")
+	pflags.StringSliceVar(&flags.Filters.Reviewers, "reviewers", []string{}, "retrieves number of reviews filtered by these users. ie 'katbyte,reviewer2,reviewer3'. Added as a separate field in addition to the number of total reviews.")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringVarP(&flags.Filters.ProjectStatusIs, "project-status-is", "", "", "filter that match project status. ie 'In Progress'")

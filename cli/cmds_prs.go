@@ -146,10 +146,11 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
 				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
 				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentsCount},
+				{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},
 			}
 
-			if pr.TotalReviewCount > 0 {
-				fields = append(fields, gh.ProjectItemField{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},)
+			if pr.FilteredReviewCount > 0 {
+				fields = append(fields, gh.ProjectItemField{Name: "filteredReviewCount", FieldID: p.FieldIDs["Filtered Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.FilteredReviewCount})
 			}
 
 			err = p.UpdateItem(*iid, fields)
