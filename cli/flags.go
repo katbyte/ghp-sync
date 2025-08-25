@@ -69,8 +69,8 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringVarP(&flags.Jira.User, "jira-user", "", "", "jira user")
 	pflags.StringVarP(&flags.Jira.Token, "jira-token", "", "", "jira oauth token (JIRA_TOKEN)")
 	pflags.StringVarP(&flags.Jira.JQL, "jira-jql", "", "", "jira jql query to list all issues")
-	pflags.StringSliceVarP(&flags.Jira.Fields, "jira-fields", "", nil, "jira fields to fetch seperated by commas")
-	pflags.StringSliceVarP(&flags.Jira.Expand, "jira-expand", "", nil, "jira fields to expand seperated by commas")
+	pflags.StringSliceVarP(&flags.Jira.Fields, "jira-fields", "", nil, "jira fields to fetch separated by commas")
+	pflags.StringSliceVarP(&flags.Jira.Expand, "jira-expand", "", nil, "jira fields to expand separated by commas")
 
 	// this is the limit of what we should be putting into ENV/flags, should be a config file TODO
 	pflags.StringVarP(&flags.Jira.IssueLinkCustomFieldID, "jira-issue-link-custom-field-id", "", "", "jira custom field id for gh issue link")
@@ -128,7 +128,6 @@ func configureFlags(root *cobra.Command) error {
 }
 
 func GetFlags() FlagData {
-
 	// TODO BUG for some reason it is not correctly splitting on ,? so hack this in
 
 	jiraFields := viper.GetStringSlice("jira-fields")

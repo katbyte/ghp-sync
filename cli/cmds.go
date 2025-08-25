@@ -1,9 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/katbyte/ghp-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project & jira <> gh TODO yes we should
+	"github.com/katbyte/ghp-sync/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -12,7 +13,7 @@ func ValidateParams(params []string) func(cmd *cobra.Command, args []string) err
 	return func(cmd *cobra.Command, args []string) error {
 		for _, p := range params {
 			if viper.GetString(p) == "" {
-				return fmt.Errorf(p + " parameter can't be empty")
+				return errors.New(p + " parameter can't be empty")
 			}
 		}
 

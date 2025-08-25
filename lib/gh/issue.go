@@ -19,14 +19,14 @@ func (r Repo) ListAllIssues(state string, cb func([]*github.Issue, *github.Respo
 	}
 
 	for {
-		clog.Log.Debugf("Listing all Issues for %s/%s (Page %d)...", r.Owner, r.Name, opts.ListOptions.Page)
+		clog.Log.Debugf("Listing all Issues for %s/%s (Page %d)...", r.Owner, r.Name, opts.Page)
 		issues, resp, err := client.Issues.ListByRepo(ctx, r.Owner, r.Name, opts)
 		if err != nil {
-			return fmt.Errorf("unable to list Issues for %s/%s (Page %d): %w", r.Owner, r.Name, opts.ListOptions.Page, err)
+			return fmt.Errorf("unable to list Issues for %s/%s (Page %d): %w", r.Owner, r.Name, opts.Page, err)
 		}
 
 		if err = cb(issues, resp); err != nil {
-			return fmt.Errorf("callback failed for %s/%s (Page %d): %w", r.Owner, r.Name, opts.ListOptions.Page, err)
+			return fmt.Errorf("callback failed for %s/%s (Page %d): %w", r.Owner, r.Name, opts.Page, err)
 		}
 
 		if resp.NextPage == 0 {

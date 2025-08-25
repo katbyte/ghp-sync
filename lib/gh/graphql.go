@@ -22,6 +22,7 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 		args = append(args, p[1])
 	}
 
+	// nolint: gosec // we are generating the args which _shouldn't_ contain anything a user could inject, and if it did users can be trusted
 	ghc := exec.Command("gh", args...)
 	if t.Token != nil {
 		ghc.Env = []string{"GITHUB_TOKEN=" + *t.Token}
@@ -31,7 +32,7 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 	s := string(out)
 
 	if err != nil {
-		return &s, fmt.Errorf("graph ql query error: %s\n\n %s\n\n%s", err, query, out)
+		return &s, fmt.Errorf("graph ql query error: %w\n\n %s\n\n%s", err, query, out)
 	}
 
 	return &s, nil

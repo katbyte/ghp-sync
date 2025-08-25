@@ -7,7 +7,6 @@ import (
 	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/spf13/cobra"
 
-	//nolint:misspell
 	c "github.com/gookit/color"
 )
 
@@ -51,7 +50,6 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			state = "all"
 		}
 		issues, err := r.GetAllIssues(state)
-
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			return nil
@@ -61,10 +59,8 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 		filters := f.GetFilters()
 
 		// Currently not interested in the username of the author for issues, so I removed the code for now
-		totalIssues := 0
-		daysSinceCreation := 0
-		collectiveDaysSinceCreation := 0
 
+		var totalIssues, daysSinceCreation, collectiveDaysSinceCreation int
 		for _, issue := range *issues {
 			issueNode := *issue.NodeID
 
@@ -72,13 +68,11 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 				c.Printf("#<lightCyan>%d</> (<cyan>%s</>) - %s \n", issue.GetNumber(), issue.User.GetLogin(), issue.GetTitle())
 			} else {
 				c.Printf("#<LightBlue>%d</> (<cyan>%s</>) - %s \n", issue.GetNumber(), issue.User.GetLogin(), issue.GetTitle())
-
 			}
 
 			// only put issues labelled whatever flag is passed (bug, etc) into the project, therefore graphyQL is inside this loop
 			sync := false
 			for _, f := range filters {
-
 				match, err := f.Issue(issue)
 				if err != nil {
 					return fmt.Errorf("ERROR: running filter %s: %w", f.Name, err)
@@ -87,7 +81,6 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 					sync = true
 					break
 				}
-
 			}
 
 			if !sync {
@@ -161,7 +154,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 				{"-f", "project=" + p.ID},
 				{"-f", "item=" + *iid},
 				{"-f", "user_field=" + p.FieldIDs["User"]},
-				{"-f", fmt.Sprintf("user_value=%s", issue.User.GetLogin())},
+				{"-f", "user_value=" + issue.User.GetLogin()},
 				{"-f", "issue_field=" + p.FieldIDs["Issue#"]},
 				{"-f", fmt.Sprintf("issue_value=%d", *issue.Number)},
 				{"-f", "daysSinceCreation_field=" + p.FieldIDs["Age"]},

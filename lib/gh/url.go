@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -15,13 +16,13 @@ func ParseGitHubURL(gitHubURL string) (owner string, name string, typ string, nu
 
 	// Check if the URL is from GitHub
 	if !strings.Contains(parsedURL.Host, "github.com") {
-		return "", "", "", 0, fmt.Errorf("URL is not a GitHub URL")
+		return "", "", "", 0, errors.New("URL is not a GitHub URL")
 	}
 
 	// Split the path and validate it
 	segments := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 	if len(segments) < 4 {
-		return "", "", "", 0, fmt.Errorf("URL path is not in the expected format")
+		return "", "", "", 0, errors.New("URL path is not in the expected format")
 	}
 
 	// Extract details
@@ -29,7 +30,7 @@ func ParseGitHubURL(gitHubURL string) (owner string, name string, typ string, nu
 	name = segments[1]
 	typ = segments[2]
 	if typ != "pull" && typ != "issues" {
-		return "", "", "", 0, fmt.Errorf("URL type is neither a pull request nor an issue")
+		return "", "", "", 0, errors.New("URL type is neither a pull request nor an issue")
 	}
 
 	// Parse the number
