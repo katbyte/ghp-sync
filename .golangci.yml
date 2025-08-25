@@ -49,8 +49,12 @@ linters:
         - io.Close
     nakedret:
       max-func-lines: 30
-    #misspell:
-      #locale: "uk"
+    misspell:
+      locale: "UK"
+      ignore-words:
+        - "color"
+        - "colour"
+        - "organization"
     tagalign:
       sort: true
     predeclared:

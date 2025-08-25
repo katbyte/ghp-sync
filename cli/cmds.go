@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/katbyte/ghp-sync/version" // todo - should we rename this (again) to ghp-sync ? if it can do project <> project & jira <> gh TODO yes we should
+	"github.com/katbyte/ghp-sync/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
