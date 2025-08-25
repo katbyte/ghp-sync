@@ -51,10 +51,10 @@ linters:
       max-func-lines: 30
     misspell:
       locale: "UK"
-      ignore-words:
+      ignore-rules:
         - "color"
-        - "colour"
         - "organization"
+        - "recognized"
     tagalign:
       sort: true
     predeclared:
