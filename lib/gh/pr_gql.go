@@ -8,20 +8,22 @@ import (
 )
 
 type PullRequest struct {
-	NodeID              string
-	Author              string
-	Number              int
-	Title               string
-	State               string
-	ReviewDecision      string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	ClosedAt            time.Time
-	Draft               bool
-	Milestone           string
-	TotalCommentsCount  int
-	TotalReviewCount    int
-	FilteredReviewCount int
+	NodeID                     string
+	Author                     string
+	Number                     int
+	Title                      string
+	State                      string
+	ReviewDecision             string
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	ClosedAt                   time.Time
+	Draft                      bool
+	Milestone                  string
+	TotalCommentCount          int
+	TotalReviewCount           int
+	ReviewCommentCount         int
+	FilteredReviewCount        int
+	FilteredReviewCommentCount int
 
 	Assignees                []string
 	AssociatedLabels         map[string]bool
@@ -68,6 +70,10 @@ type pullRequestsQuery struct {
 						Author struct {
 							Login string
 						}
+						Comments struct {
+							TotalCount int
+						}
+						State string
 					}
 				} `graphql:"reviews(first: 100)"`
 
@@ -143,7 +149,7 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 			ClosedAt:                 pullRequest.ClosedAt,
 			Draft:                    pullRequest.IsDraft,
 			Milestone:                pullRequest.Milestone.Title,
-			TotalCommentsCount:       pullRequest.TotalCommentsCount,
+			TotalCommentCount:        pullRequest.TotalCommentsCount,
 			AssociatedLabels:         make(map[string]bool),
 			AssociatedProjectNumbers: make(map[int]bool),
 		}
@@ -161,13 +167,20 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 		}
 
 		for _, review := range pullRequest.Reviews.Nodes {
+			// We're only interested in `APPROVED`, `CHANGES_REQUESTED`, and `DISMISSED` states.
+			if review.State == string(githubv4.PullRequestReviewStateCommented) || review.State == string(githubv4.PullRequestReviewStatePending) {
+				continue
+			}
 			pr.TotalReviewCount++
+			pr.ReviewCommentCount += review.Comments.TotalCount
 
 			// Only add filtered review count if `reviewers` filter was provided
 			if _, ok := reviewers[review.Author.Login]; ok {
 				pr.FilteredReviewCount++
+				pr.FilteredReviewCommentCount += review.Comments.TotalCount
 			}
 		}
+
 
 		result = append(result, pr)
 	}
