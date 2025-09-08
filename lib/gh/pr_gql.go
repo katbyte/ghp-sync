@@ -181,7 +181,6 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 			}
 		}
 
-
 		result = append(result, pr)
 	}
 
