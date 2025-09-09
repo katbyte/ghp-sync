@@ -144,12 +144,14 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.Author},
 				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
 				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
-				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentsCount},
+				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentCount},
 				{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},
+				{Name: "reviewCommentCount", FieldID: p.FieldIDs["Review Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.ReviewCommentCount},
 			}
 
 			if pr.FilteredReviewCount > 0 {
 				fields = append(fields, gh.ProjectItemField{Name: "filteredReviewCount", FieldID: p.FieldIDs["Filtered Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.FilteredReviewCount})
+				fields = append(fields, gh.ProjectItemField{Name: "filteredReviewCommentCount", FieldID: p.FieldIDs["Filtered Review Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.FilteredReviewCommentCount})
 			}
 
 			err = p.UpdateItem(*iid, fields)
