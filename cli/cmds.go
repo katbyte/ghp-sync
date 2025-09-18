@@ -83,7 +83,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 
 	// command to get and print gh rate limits
 	root.AddCommand(&cobra.Command{
-		Use:           "rate-limit",
+		Use:           "rate-limits",
 		Short:         "get and print github api rate limits",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
