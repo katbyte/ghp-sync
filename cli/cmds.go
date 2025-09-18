@@ -27,7 +27,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Short:         cmdName + "is a small utility to TODO",
 		Long:          `TODO`,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repos", "project-owner", "project-number"}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("USAGE: ghp-repo-syc [issues|prs] katbyte/ghp-sync project")
 
@@ -50,7 +50,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Short:         "Sync issues from a repo to a project",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repos", "project-owner", "project-number"}),
 		RunE:          CmdIssues,
 	})
 
@@ -59,7 +59,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Short:         "Sync PRs from a repo to a project",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "repo", "project-owner", "project-number"}),
+		PreRunE:       ValidateParams([]string{"token", "repos", "project-owner", "project-number"}),
 		RunE:          CmdPRs,
 	})
 
@@ -79,6 +79,16 @@ func Make(cmdName string) (*cobra.Command, error) {
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "project-owner", "project-number", "jira-url", "jira-user", "jira-token", "jira-jql"}),
 		RunE:          CmdJIRA,
+	})
+
+	// command to get and print gh rate limits
+	root.AddCommand(&cobra.Command{
+		Use:           "rate-limit",
+		Short:         "get and print github api rate limits",
+		Args:          cobra.NoArgs,
+		SilenceErrors: true,
+		PreRunE:       ValidateParams([]string{"token"}),
+		RunE:          CmdRateLimit,
 	})
 
 	// TODO add CLEAR command to reset a project? other commands to cleanup project?

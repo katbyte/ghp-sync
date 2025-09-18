@@ -3,14 +3,13 @@ package cli
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/katbyte/ghp-sync/lib/gh"
-	"github.com/shurcooL/githubv4"
-	"github.com/spf13/cobra"
-
 	c "github.com/gookit/color"
+	"github.com/katbyte/ghp-sync/lib/gh"
+	"github.com/spf13/cobra"
 )
 
 func CmdPRs(_ *cobra.Command, _ []string) error {
@@ -45,15 +44,21 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			return nil
 		}
 
+		limitMsg := ""
+		if f.ItemLimit != 0 {
+			limitMsg = " limited to: <yellow>" + strconv.Itoa(f.ItemLimit) + "</> items"
+		}
+
 		// get all pull requests
-		c.Printf("Retrieving all prs for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
-		prs, err := r.GetAllPullRequestsGQL(githubv4.PullRequestStateOpen, f.Filters.Reviewers)
+		c.Printf("Retrieving all prs for <white>%s</>/<cyan>%s</> with states <green>%s</>%s. Loaded ", r.Owner, r.Name, f.Filters.States, limitMsg)
+		prs, err := r.GetAllPullRequestsGQL(f.Filters.States, f.Filters.Reviewers, f.ItemLimit, func(i int) {
+			fmt.Printf("%d ", i)
+		})
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			return nil
 		}
-		c.Printf(" found <yellow>%d</>\n", len(*prs))
-
+		c.Printf("<yellow>%d</> items\n", len(*prs))
 		prs = FilterByFlags(f, prs)
 
 		byStatus := map[string][]int{}
@@ -77,15 +82,19 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 			var status, statusText string
 			switch {
-			// TODO if approved make sure it stays approved
-			case pr.ReviewDecision == "APPROVED":
+			case strings.EqualFold(pr.State, "merged"):
+				statusText = "Merged"
+				daysOpen = int(pr.ClosedAt.Sub(pr.CreatedAt) / (time.Hour * 24))
+				c.Printf("  <green>Merged</>\n")
+			case pr.ReviewDecision == "APPROVED": // TODO if approved make sure it stays approved
 				statusText = "Approved"
 				c.Printf("  <blue>Approved</> <gray>(reviews)</>\n")
-			case pr.State == "closed": // We filter by open PRs so pr.State should never be `closed`?
+			case strings.EqualFold(pr.State, "closed"): // We filter by open PRs so pr.State should never be `closed`?
 				statusText = "Closed"
 				daysOpen = int(pr.ClosedAt.Sub(pr.CreatedAt) / (time.Hour * 24))
 				c.Printf("  <darkred>Closed</> <gray>(state)</>\n")
-			case pr.Milestone == "Blocked":
+
+			case strings.EqualFold(pr.Milestone, "Blocked"):
 				statusText = "Blocked"
 				c.Printf("  <red>Blocked</> <gray>(milestone)</>\n")
 			case pr.Draft:

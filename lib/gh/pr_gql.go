@@ -90,11 +90,11 @@ type pullRequestsQuery struct {
 				EndCursor   string
 				HasNextPage bool
 			}
-		} `graphql:"pullRequests(first: 100, after: $cursor, states: $state, orderBy: {field: CREATED_AT, direction: DESC})"`
+		} `graphql:"pullRequests(first: 40, after: $cursor, states: $state, orderBy: {field: CREATED_AT, direction: DESC})"`
 	} `graphql:"repository(owner: $owner, name: $repository)"`
 }
 
-func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers []string) (*[]PullRequest, error) {
+func (r Repo) GetAllPullRequestsGQL(states []string, reviewers []string, limit int, progress func(int)) (*[]PullRequest, error) {
 	client, ctx, err := r.NewGraphQLClient()
 	if err != nil {
 		return nil, fmt.Errorf("instantiating GraphQL client: %w", err)
@@ -109,11 +109,16 @@ func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers [
 		}
 	}
 
+	ghStates := make([]githubv4.PullRequestState, 0, len(states))
+	for _, state := range states {
+		ghStates = append(ghStates, githubv4.PullRequestState(state))
+	}
+
 	query := pullRequestsQuery{}
 	variables := map[string]any{
 		"owner":      githubv4.String(r.Owner),
 		"repository": githubv4.String(r.Name),
-		"state":      []githubv4.PullRequestState{state},
+		"state":      ghStates,
 		"cursor":     (*githubv4.String)(nil), // Default to nil / null, conditionally update this if there is pagination
 	}
 
@@ -124,7 +129,11 @@ func (r Repo) GetAllPullRequestsGQL(state githubv4.PullRequestState, reviewers [
 
 		allPRs = append(allPRs, query.flatten(rev)...)
 
-		if !query.Repository.PullRequests.PageInfo.HasNextPage {
+		if progress != nil {
+			progress(len(allPRs))
+		}
+
+		if !query.Repository.PullRequests.PageInfo.HasNextPage || (limit > 0 && len(allPRs) >= limit) {
 			break
 		}
 		variables["cursor"] = githubv4.String(query.Repository.PullRequests.PageInfo.EndCursor)

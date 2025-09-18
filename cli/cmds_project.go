@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
+	c "github.com/gookit/color"
 	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/spf13/cobra"
-
-	c "github.com/gookit/color"
 )
 
 func CmdSync(_ *cobra.Command, args []string) error {

@@ -8,14 +8,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-// TODO - this is a lot of flags, we should move this to a config file
+// TODO - this is a lot of flags, we should move this to a config file?
+
+// TODO 2 - we should move to the new viper way of doing things https://sagikazarmark.hu/blog/decoding-custom-formats-with-viper/
 
 type FlagData struct {
 	Token         string
 	Repos         []string
 	ProjectOwner  string
 	ProjectNumber int
-	IncludeClosed bool
+	IncludeClosed bool // TODO remove and use filters.States
+	ItemLimit     int
 	DryRun        bool
 	Filters       Filters
 	Jira          Jira
@@ -27,6 +30,7 @@ type Filters struct {
 	Reviewers []string
 	LabelsOr  []string
 	LabelsAnd []string
+	States    []string
 
 	// todo move this to flags.project.Filters?
 	ProjectStatusIs       string
@@ -60,10 +64,11 @@ func configureFlags(root *cobra.Command) error {
 	pflags := root.PersistentFlags()
 
 	pflags.StringVarP(&flags.Token, "token", "t", "", "github oauth token (GITHUB_TOKEN)")
-	pflags.StringSliceVarP(&flags.Repos, "repo", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `owner1/repo1,owner2/repo2`")
+	pflags.StringSliceVarP(&flags.Repos, "repos", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `owner1/repo1,owner2/repo2`")
 	pflags.StringVarP(&flags.ProjectOwner, "project-owner", "o", "", "github project owner (GITHUB_PROJECT_OWNER)")
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
-	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed prs/issues")
+	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed issues (GITHUB_INCLUDE_CLOSED)")
+	pflags.IntVarP(&flags.ItemLimit, "item-limit", "", 0, "limit the number of items to process (0 for no limit)")
 
 	pflags.StringVarP(&flags.Jira.Url, "jira-url", "", "", "jira instance url")
 	pflags.StringVarP(&flags.Jira.User, "jira-user", "", "", "jira user")
@@ -81,6 +86,7 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringSliceVar(&flags.Filters.Reviewers, "reviewers", []string{}, "retrieves number of reviews filtered by these users. ie 'katbyte,reviewer2,reviewer3'. Added as a separate field in addition to the number of total reviews.")
 	pflags.StringSliceVarP(&flags.Filters.LabelsOr, "labels-or", "l", []string{}, "filter that match any label conditions. ie 'label1,label2,-not-this-label'")
 	pflags.StringSliceVarP(&flags.Filters.LabelsAnd, "labels-and", "", []string{}, "filter that match all label conditions. ie 'label1,label2,-not-this-label'")
+	pflags.StringSliceVarP(&flags.Filters.States, "pr-states", "", []string{"OPEN"}, "filter that match pr states. ie 'OPEN,MERGED,CLOSED'")
 	pflags.StringVarP(&flags.Filters.ProjectStatusIs, "project-status-is", "", "", "filter that match project status. ie 'In Progress'")
 	pflags.StringSliceVarP(&flags.Filters.ProjectFieldPopulated, "project-fields-populated", "", []string{}, "filter that match project fields populated. ie 'Due Date'")
 
@@ -90,10 +96,12 @@ func configureFlags(root *cobra.Command) error {
 	// this is too large now, we need to make a config file
 	m := map[string]string{
 		"token":                           "GITHUB_TOKEN",
-		"repo":                            "GITHUB_REPO", // todo rename this to repos
+		"repos":                           "GITHUB_REPO", // todo rename this to repos
 		"project-owner":                   "GITHUB_PROJECT_OWNER",
 		"project-number":                  "GITHUB_PROJECT_NUMBER",
 		"include-closed":                  "GITHUB_INCLUDE_CLOSED",
+		"item-limit":                      "ITEM_LIMIT",
+		"pr-states":                       "GITHUB_PR_STATES",
 		"project-status-is":               "GITHUB_PROJECT_STATUS_IS",
 		"project-fields-populated":        "GITHUB_PROJECT_FIELDS_POPULATED",
 		"jira-url":                        "JIRA_URL",
@@ -127,40 +135,23 @@ func configureFlags(root *cobra.Command) error {
 	return nil
 }
 
+// viper does not correctly handle string slices from env vars the same way it does commandline flags
+// see https://github.com/spf13/viper/issues/380?utm_source=chatgpt.com
+func GetStringSliceFixed(key string) []string {
+	s := viper.GetStringSlice(key)
+
+	if len(s) == 0 || (len(s) == 1 && s[0] == "") {
+		return s // empty
+	}
+
+	if len(s) > 1 { // already a slice, return as is
+		return s
+	}
+
+	return strings.Split(s[0], ",") // todo trim spaces and ignore empty?
+}
+
 func GetFlags() FlagData {
-	// TODO BUG for some reason it is not correctly splitting on ,? so hack this in
-
-	jiraFields := viper.GetStringSlice("jira-fields")
-	if len(jiraFields) > 0 {
-		jiraFields = strings.Split(jiraFields[0], ",")
-	}
-
-	jiraExpand := viper.GetStringSlice("jira-expand")
-	if len(jiraExpand) > 0 {
-		jiraExpand = strings.Split(jiraExpand[0], ",")
-	}
-
-	authors := viper.GetStringSlice("authors")
-	if len(authors) > 0 {
-		authors = strings.Split(authors[0], ",")
-	}
-	repos := viper.GetStringSlice("repo")
-	if len(repos) > 0 {
-		repos = strings.Split(repos[0], ",")
-	}
-	assignees := viper.GetStringSlice("assignees")
-	if len(assignees) > 0 {
-		assignees = strings.Split(assignees[0], ",")
-	}
-	reviewers := viper.GetStringSlice("reviewers")
-	if len(reviewers) > 0 {
-		reviewers = strings.Split(reviewers[0], ",")
-	}
-	projectFields := viper.GetStringSlice("project-fields-populated")
-	if len(projectFields) > 0 {
-		projectFields = strings.Split(projectFields[0], ",")
-	}
-
 	// custom fields
 	jiraCustomFieldsStr := viper.GetString("jira-custom-fields")
 	jiraCustomFields := make([]JiraCustomFields, 0)
@@ -187,10 +178,12 @@ func GetFlags() FlagData {
 	// there has to be an easier way....
 	return FlagData{
 		Token:         viper.GetString("token"),
-		Repos:         repos,
+		Repos:         GetStringSliceFixed("repos"),
 		ProjectNumber: viper.GetInt("project-number"),
 		ProjectOwner:  viper.GetString("project-owner"),
-		IncludeClosed: viper.GetBool("include-closed"),
+
+		IncludeClosed: viper.GetBool("include-closed"), // todo remove and use filters.States
+		ItemLimit:     viper.GetInt("item-limit"),
 
 		DryRun: viper.GetBool("dry-run"),
 
@@ -199,8 +192,8 @@ func GetFlags() FlagData {
 			User:   viper.GetString("jira-user"),
 			Token:  viper.GetString("jira-token"),
 			JQL:    viper.GetString("jira-jql"),
-			Fields: jiraFields,
-			Expand: jiraExpand,
+			Fields: GetStringSliceFixed("jira-fields"),
+			Expand: GetStringSliceFixed("jira-expand"),
 
 			IssueLinkCustomFieldID: viper.GetString("jira-issue-link-custom-field-id"),
 
@@ -209,13 +202,14 @@ func GetFlags() FlagData {
 		},
 
 		Filters: Filters{
-			Authors:               authors,
-			Assignees:             assignees,
-			Reviewers:             reviewers,
+			Authors:               GetStringSliceFixed("authors"),
+			Assignees:             GetStringSliceFixed("assignees"),
+			Reviewers:             GetStringSliceFixed("reviewers"),
 			LabelsOr:              viper.GetStringSlice("labels-or"),
 			LabelsAnd:             viper.GetStringSlice("labels-and"),
+			States:                GetStringSliceFixed("pr-states"),
 			ProjectStatusIs:       viper.GetString("project-status-is"),
-			ProjectFieldPopulated: projectFields,
+			ProjectFieldPopulated: GetStringSliceFixed("project-fields-populated"),
 		},
 	}
 }

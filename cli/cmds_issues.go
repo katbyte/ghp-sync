@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	c "github.com/gookit/color"
 	"github.com/katbyte/ghp-sync/lib/gh"
 	"github.com/spf13/cobra"
-
-	c "github.com/gookit/color"
 )
 
 func CmdIssues(_ *cobra.Command, _ []string) error {
