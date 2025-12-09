@@ -3,7 +3,10 @@ package gh
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 func (t Token) GraphQLQueryUnmarshal(query string, params [][]string, data interface{}) error {
@@ -15,6 +18,11 @@ func (t Token) GraphQLQueryUnmarshal(query string, params [][]string, data inter
 }
 
 func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
+	const (
+		maxAttempts = 5
+		baseDelay   = time.Minute
+	)
+
 	args := []string{"api", "graphql", "-f", query}
 
 	for _, p := range params {
@@ -22,18 +30,47 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 		args = append(args, p[1])
 	}
 
-	// nolint: gosec // we are generating the args which _shouldn't_ contain anything a user could inject, and if it did users can be trusted
-	ghc := exec.Command("gh", args...)
-	if t.Token != nil {
-		ghc.Env = []string{"GITHUB_TOKEN=" + *t.Token}
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		ghc := exec.Command("gh", args...)
+
+		// Preserve existing environment and add GITHUB_TOKEN if present
+		env := os.Environ()
+		if t.Token != nil {
+			env = append(env, "GITHUB_TOKEN="+*t.Token)
+		}
+		ghc.Env = env
+
+		out, err := ghc.CombinedOutput()
+		outstr := string(out)
+
+		// Success: return immediately
+		if err == nil {
+			return &outstr, nil
+		}
+
+		// If it doesn't look like a rate limit error, fail fast
+		if !isRateLimitError(outstr) && !isRateLimitError(err.Error()) {
+			return nil, fmt.Errorf("gh graphql failed: %w\noutput: %s", err, outstr)
+		}
+
+		// If we've hit rate limit and used all attempts, bail out
+		if attempt == maxAttempts {
+			return nil, fmt.Errorf("rate limited after %d attempts: %w\nlast output: %s", attempt, err.Error(), outstr)
+		}
+
+		// Exponential backoff (1s, 2s, 4s, 8s, ...)
+		delay := baseDelay * time.Duration(1<<uint(attempt-1))
+		time.Sleep(delay)
 	}
 
-	out, err := ghc.CombinedOutput()
-	s := string(out)
+	// Should be unreachable, but keeps compiler happy
+	return nil, fmt.Errorf("gh graphql failed after retries - you should never see this thou...")
+}
 
-	if err != nil {
-		return &s, fmt.Errorf("graph ql query error: %w\n\n %s\n\n%s", err, query, out)
-	}
-
-	return &s, nil
+func isRateLimitError(msg string) bool {
+	m := strings.ToLower(msg)
+	return strings.Contains(m, "rate limit") ||
+		strings.Contains(m, "api rate limit exceeded") ||
+		strings.Contains(m, "secondary rate limit") ||
+		strings.Contains(m, "abuse detection")
 }

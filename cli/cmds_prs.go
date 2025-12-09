@@ -156,6 +156,11 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentCount},
 				{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},
 				{Name: "reviewCommentCount", FieldID: p.FieldIDs["Review Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.ReviewCommentCount},
+				{Name: "createdAt", FieldID: p.FieldIDs["Created At"], Type: gh.ItemValueTypeDate, Value: pr.CreatedAt.Format(time.RFC3339)},
+			}
+
+			if !strings.EqualFold(pr.State, "open") {
+				fields = append(fields, gh.ProjectItemField{Name: "closedAt", FieldID: p.FieldIDs["Closed At"], Type: gh.ItemValueTypeDate, Value: pr.ClosedAt.Format(time.RFC3339)})
 			}
 
 			if pr.FilteredReviewCount > 0 {
