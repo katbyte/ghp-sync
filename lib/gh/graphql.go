@@ -2,7 +2,9 @@ package gh
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
@@ -31,7 +33,7 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 	}
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		ghc := exec.Command("gh", args...)
+		ghc := exec.Command("gh", args...) //nolint:gosec // args are constructed internally
 
 		// Preserve existing environment and add GITHUB_TOKEN if present
 		env := os.Environ()
@@ -55,16 +57,16 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 
 		// If we've hit rate limit and used all attempts, bail out
 		if attempt == maxAttempts {
-			return nil, fmt.Errorf("rate limited after %d attempts: %w\nlast output: %s", attempt, err.Error(), outstr)
+			return nil, fmt.Errorf("rate limited after %d attempts: %w\nlast output: %s", attempt, err, outstr)
 		}
 
 		// Exponential backoff (1s, 2s, 4s, 8s, ...)
-		delay := baseDelay * time.Duration(1<<uint(attempt-1))
+		delay := baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
 		time.Sleep(delay)
 	}
 
 	// Should be unreachable, but keeps compiler happy
-	return nil, fmt.Errorf("gh graphql failed after retries - you should never see this thou...")
+	return nil, errors.New("gh graphql failed after retries, this should be unreachable")
 }
 
 func isRateLimitError(msg string) bool {
