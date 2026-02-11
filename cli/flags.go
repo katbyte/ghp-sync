@@ -71,7 +71,7 @@ func configureFlags(root *cobra.Command) error {
 	// this is too large now, we need to make a config file
 	m := map[string]string{
 		"token":                    "GITHUB_TOKEN",
-		"repos":                    "GITHUB_REPO", // todo rename this to repos
+		"repos":                    "GITHUB_REPOS", // todo rename this to repos
 		"project-owner":            "GITHUB_PROJECT_OWNER",
 		"project-number":           "GITHUB_PROJECT_NUMBER",
 		"include-closed":           "GITHUB_INCLUDE_CLOSED",
