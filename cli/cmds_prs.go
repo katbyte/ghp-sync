@@ -80,7 +80,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			daysOpen := int(time.Since(pr.CreatedAt) / (time.Hour * 24))
 			daysWaiting := 0
 
-			var status, statusText string
+			var statusText string
 			switch {
 			case strings.EqualFold(pr.State, "merged"):
 				statusText = "Merged"
@@ -104,10 +104,10 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				statusText = "In Progress"
 				c.Printf("  <yellow>In Progress</> <gray>(draft)</>\n")
 			case pr.AssociatedLabels["waiting-response"]:
-				statusText = "Waiting for Response"
+				statusText = "In Progress"
 				c.Printf("  <lightGreen>Waiting for Response</> <gray>(label)</>\n")
 			default:
-				statusText = "Waiting for Review"
+				statusText = "Waiting"
 				c.Printf("  <green>Waiting for Review</> <gray>(default)</>")
 
 				// calculate days waiting
@@ -142,35 +142,44 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				totalDaysWaiting += daysWaiting
 			}
 
-			status = p.StatusIDs[statusText]
 			byStatus[statusText] = append(byStatus[statusText], pr.Number)
 
 			c.Printf("  open %d days, waiting %d days\n", daysOpen, daysWaiting)
 
-			fields := []gh.ProjectItemField{
-				{Name: "number", FieldID: p.FieldIDs["PR#"], Type: gh.ItemValueTypeNumber, Value: pr.Number},
-				{Name: "status", FieldID: p.FieldIDs["Status"], Type: gh.ItemValueTypeSingleSelect, Value: status},
-				{Name: "user", FieldID: p.FieldIDs["User"], Type: gh.ItemValueTypeText, Value: pr.Author},
-				{Name: "daysOpen", FieldID: p.FieldIDs["Open Days"], Type: gh.ItemValueTypeNumber, Value: daysOpen},
-				{Name: "daysWait", FieldID: p.FieldIDs["Waiting Days"], Type: gh.ItemValueTypeNumber, Value: daysWaiting},
-				{Name: "commentCount", FieldID: p.FieldIDs["Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalCommentCount},
-				{Name: "reviewCount", FieldID: p.FieldIDs["Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.TotalReviewCount},
-				{Name: "reviewCommentCount", FieldID: p.FieldIDs["Review Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.ReviewCommentCount},
-				{Name: "createdAt", FieldID: p.FieldIDs["Created At"], Type: gh.ItemValueTypeDate, Value: pr.CreatedAt.Format(time.RFC3339)},
+			// Build field context for computing values
+			fieldCtx := PRFieldContext{
+				PR:          &pr,
+				Project:     p,
+				DaysOpen:    daysOpen,
+				DaysWaiting: daysWaiting,
+				Status:      statusText,
 			}
 
-			if !strings.EqualFold(pr.State, "open") {
-				fields = append(fields, gh.ProjectItemField{Name: "closedAt", FieldID: p.FieldIDs["Closed At"], Type: gh.ItemValueTypeDate, Value: pr.ClosedAt.Format(time.RFC3339)})
-			}
+			// Build fields dynamically from registry
+			var fields []gh.ProjectItemField
+			for _, fieldName := range f.PRFields {
+				fieldID, ok := p.FieldIDs[fieldName]
+				if !ok {
+					return fmt.Errorf("pr field %q not found in project", fieldName)
+				}
 
-			if pr.FilteredReviewCount > 0 {
-				fields = append(fields, gh.ProjectItemField{Name: "filteredReviewCount", FieldID: p.FieldIDs["Filtered Review Count"], Type: gh.ItemValueTypeNumber, Value: pr.FilteredReviewCount})
-				fields = append(fields, gh.ProjectItemField{Name: "filteredReviewCommentCount", FieldID: p.FieldIDs["Filtered Review Comment Count"], Type: gh.ItemValueTypeNumber, Value: pr.FilteredReviewCommentCount})
+				fieldDef := PRFields[fieldName]
+				value := fieldDef.ComputeFn(fieldCtx)
+				if value == nil {
+					continue // ComputeFn returned nil, skip this field
+				}
+
+				fields = append(fields, gh.ProjectItemField{
+					Name:    strings.ToLower(strings.NewReplacer(" ", "_", "#", "").Replace(fieldName)),
+					FieldID: fieldID,
+					Type:    fieldDef.Type,
+					Value:   value,
+				})
 			}
 
 			err = p.UpdateItem(*iid, fields)
 			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s", err)
+				c.Printf("<red>ERROR!!</> %s\n\n", err)
 				continue
 			}
 

@@ -321,7 +321,11 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 
 	out, err := p.GraphQLQuery(mutation, params)
 	if err != nil {
-		return fmt.Errorf("error updating project item: %w: %s", err, *out)
+		outStr := ""
+		if out != nil {
+			outStr = *out
+		}
+		return fmt.Errorf("error updating project item: %w\noutput: %s\nmutation: %s", err, outStr, mutation)
 	}
 
 	return nil

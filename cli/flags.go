@@ -21,7 +21,12 @@ type FlagData struct {
 	ItemLimit     int
 	DryRun        bool
 	Filters       Filters
-	Jira          Jira
+	Jira          Jira // TODO we can likely remove this as it's not used anymore?
+
+	// PR field population control
+	PRPopulateFields []string // Only populate these fields (empty = all)
+	PRSkipFields     []string // Skip these fields from population
+	PRFields         []string // Resolved list of field names to populate
 }
 
 type Filters struct {
@@ -90,6 +95,10 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringVarP(&flags.Filters.ProjectStatusIs, "project-status-is", "", "", "filter that match project status. ie 'In Progress'")
 	pflags.StringSliceVarP(&flags.Filters.ProjectFieldPopulated, "project-fields-populated", "", []string{}, "filter that match project fields populated. ie 'Due Date'")
 
+	// PR field population control
+	pflags.StringSliceVar(&flags.PRPopulateFields, "pr-populate-fields", []string{}, "only populate these PR fields (accepts field names or aliases, e.g. 'PR#,open-days')")
+	pflags.StringSliceVar(&flags.PRSkipFields, "pr-skip-fields", []string{}, "skip these PR fields from population (accepts field names or aliases)")
+
 	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
@@ -117,6 +126,8 @@ func configureFlags(root *cobra.Command) error {
 		"reviewers":                       "GITHUB_REVIEWERS",
 		"labels-or":                       "GITHUB_LABELS_OR",
 		"labels-and":                      "GITHUB_LABELS_AND",
+		"pr-populate-fields":              "GITHUB_PR_POPULATE_FIELDS",
+		"pr-skip-fields":                  "GITHUB_PR_SKIP_FIELDS",
 		"dry-run":                         "",
 	}
 
@@ -131,6 +142,8 @@ func configureFlags(root *cobra.Command) error {
 			}
 		}
 	}
+
+	root.MarkFlagsMutuallyExclusive("pr-populate-fields", "pr-skip-fields")
 
 	return nil
 }
@@ -176,7 +189,7 @@ func GetFlags() FlagData {
 	}
 
 	// there has to be an easier way....
-	return FlagData{
+	f := FlagData{
 		Token:         viper.GetString("token"),
 		Repos:         GetStringSliceFixed("repos"),
 		ProjectNumber: viper.GetInt("project-number"),
@@ -211,5 +224,37 @@ func GetFlags() FlagData {
 			ProjectStatusIs:       viper.GetString("project-status-is"),
 			ProjectFieldPopulated: GetStringSliceFixed("project-fields-populated"),
 		},
+
+		PRPopulateFields: GetStringSliceFixed("pr-populate-fields"),
+		PRSkipFields:     GetStringSliceFixed("pr-skip-fields"),
 	}
+
+	// Resolve which PR field names to populate
+	f.PRFields = resolvePRFieldNames(f.PRPopulateFields, f.PRSkipFields)
+
+	return f
+}
+
+// resolvePRFieldNames returns the list of PR field names to populate based on populate/skip lists.
+// If populate is empty, all field names are returned minus any in skip.
+func resolvePRFieldNames(populate, skip []string) []string {
+	// If populate is specified, use exactly what the user passed in
+	if len(populate) > 0 {
+		return populate
+	}
+
+	// Build skip set from user input
+	skipSet := make(map[string]bool)
+	for _, name := range skip {
+		skipSet[name] = true
+	}
+
+	// Default: all fields except skipped ones
+	var result []string
+	for fieldName := range PRFields {
+		if !skipSet[fieldName] {
+			result = append(result, fieldName)
+		}
+	}
+	return result
 }
