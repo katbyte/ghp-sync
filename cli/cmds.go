@@ -72,15 +72,6 @@ func Make(cmdName string) (*cobra.Command, error) {
 		RunE:          CmdSync,
 	})
 
-	root.AddCommand(&cobra.Command{
-		Use:           "jira",
-		Short:         "sync from jira to gh project",
-		Args:          cobra.NoArgs,
-		SilenceErrors: true,
-		PreRunE:       ValidateParams([]string{"token", "project-owner", "project-number", "jira-url", "jira-user", "jira-token", "jira-jql"}),
-		RunE:          CmdJIRA,
-	})
-
 	// command to get and print gh rate limits
 	root.AddCommand(&cobra.Command{
 		Use:           "rate-limits",

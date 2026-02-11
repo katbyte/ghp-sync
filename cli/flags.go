@@ -21,7 +21,6 @@ type FlagData struct {
 	ItemLimit     int
 	DryRun        bool
 	Filters       Filters
-	Jira          Jira // TODO we can likely remove this as it's not used anymore?
 
 	// PR field population control
 	PRPopulateFields []string // Only populate these fields (empty = all)
@@ -42,28 +41,6 @@ type Filters struct {
 	ProjectFieldPopulated []string
 }
 
-type Jira struct {
-	Url   string
-	User  string
-	Token string
-	JQL   string
-
-	Fields []string
-	Expand []string
-
-	IssueLinkCustomFieldID string
-
-	CustomFieldsStr string
-	CustomFields    []JiraCustomFields
-}
-
-type JiraCustomFields struct {
-	ID           string
-	Name         string
-	Type         string
-	ProjectField string
-}
-
 func configureFlags(root *cobra.Command) error {
 	flags := FlagData{}
 	pflags := root.PersistentFlags()
@@ -74,17 +51,6 @@ func configureFlags(root *cobra.Command) error {
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
 	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed issues (GITHUB_INCLUDE_CLOSED)")
 	pflags.IntVarP(&flags.ItemLimit, "item-limit", "", 0, "limit the number of items to process (0 for no limit)")
-
-	pflags.StringVarP(&flags.Jira.Url, "jira-url", "", "", "jira instance url")
-	pflags.StringVarP(&flags.Jira.User, "jira-user", "", "", "jira user")
-	pflags.StringVarP(&flags.Jira.Token, "jira-token", "", "", "jira oauth token (JIRA_TOKEN)")
-	pflags.StringVarP(&flags.Jira.JQL, "jira-jql", "", "", "jira jql query to list all issues")
-	pflags.StringSliceVarP(&flags.Jira.Fields, "jira-fields", "", nil, "jira fields to fetch separated by commas")
-	pflags.StringSliceVarP(&flags.Jira.Expand, "jira-expand", "", nil, "jira fields to expand separated by commas")
-
-	// this is the limit of what we should be putting into ENV/flags, should be a config file TODO
-	pflags.StringVarP(&flags.Jira.IssueLinkCustomFieldID, "jira-issue-link-custom-field-id", "", "", "jira custom field id for gh issue link")
-	pflags.StringVarP(&flags.Jira.CustomFieldsStr, "jira-custom-fields", "", "", "jira custom fields to fetch in the format of `customfield_10001|name|type|project_field,customfield_10502|name|type|project_field`")
 
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
 	pflags.StringSliceVarP(&flags.Filters.Assignees, "assignees", "", []string{}, "sync prs assigned to these users. ie 'katbyte,assignee2,assignee3'")
@@ -104,31 +70,23 @@ func configureFlags(root *cobra.Command) error {
 	// binding map for viper/pflag -> env
 	// this is too large now, we need to make a config file
 	m := map[string]string{
-		"token":                           "GITHUB_TOKEN",
-		"repos":                           "GITHUB_REPO", // todo rename this to repos
-		"project-owner":                   "GITHUB_PROJECT_OWNER",
-		"project-number":                  "GITHUB_PROJECT_NUMBER",
-		"include-closed":                  "GITHUB_INCLUDE_CLOSED",
-		"item-limit":                      "ITEM_LIMIT",
-		"pr-states":                       "GITHUB_PR_STATES",
-		"project-status-is":               "GITHUB_PROJECT_STATUS_IS",
-		"project-fields-populated":        "GITHUB_PROJECT_FIELDS_POPULATED",
-		"jira-url":                        "JIRA_URL",
-		"jira-user":                       "JIRA_USER",
-		"jira-jql":                        "JIRA_JQL",
-		"jira-token":                      "JIRA_TOKEN",
-		"jira-fields":                     "JIRA_FIELDS",
-		"jira-expand":                     "JIRA_EXPAND",
-		"jira-issue-link-custom-field-id": "JIRA_ISSUE_LINK_CUSTOM_FIELD_ID",
-		"jira-custom-fields":              "JIRA_CUSTOM_FIELDS",
-		"authors":                         "GITHUB_AUTHORS",
-		"assignees":                       "GITHUB_ASSIGNEES",
-		"reviewers":                       "GITHUB_REVIEWERS",
-		"labels-or":                       "GITHUB_LABELS_OR",
-		"labels-and":                      "GITHUB_LABELS_AND",
-		"pr-populate-fields":              "GITHUB_PR_POPULATE_FIELDS",
-		"pr-skip-fields":                  "GITHUB_PR_SKIP_FIELDS",
-		"dry-run":                         "",
+		"token":                    "GITHUB_TOKEN",
+		"repos":                    "GITHUB_REPO", // todo rename this to repos
+		"project-owner":            "GITHUB_PROJECT_OWNER",
+		"project-number":           "GITHUB_PROJECT_NUMBER",
+		"include-closed":           "GITHUB_INCLUDE_CLOSED",
+		"item-limit":               "ITEM_LIMIT",
+		"pr-states":                "GITHUB_PR_STATES",
+		"project-status-is":        "GITHUB_PROJECT_STATUS_IS",
+		"project-fields-populated": "GITHUB_PROJECT_FIELDS_POPULATED",
+		"authors":                  "GITHUB_AUTHORS",
+		"assignees":                "GITHUB_ASSIGNEES",
+		"reviewers":                "GITHUB_REVIEWERS",
+		"labels-or":                "GITHUB_LABELS_OR",
+		"labels-and":               "GITHUB_LABELS_AND",
+		"pr-populate-fields":       "GITHUB_PR_POPULATE_FIELDS",
+		"pr-skip-fields":           "GITHUB_PR_SKIP_FIELDS",
+		"dry-run":                  "",
 	}
 
 	for name, env := range m {
@@ -165,29 +123,6 @@ func GetStringSliceFixed(key string) []string {
 }
 
 func GetFlags() FlagData {
-	// custom fields
-	jiraCustomFieldsStr := viper.GetString("jira-custom-fields")
-	jiraCustomFields := make([]JiraCustomFields, 0)
-	if jiraCustomFieldsStr != "" {
-		fields := strings.Split(jiraCustomFieldsStr, ",")
-		for _, cf := range fields {
-			cfParts := strings.Split(cf, "|")
-			if len(cfParts) != 4 {
-				fmt.Printf("invalid custom field format, expected id|name|type|project_field got %q\n", cf)
-				continue
-			}
-
-			jiraCustomField := JiraCustomFields{
-				ID:           cfParts[0],
-				Name:         cfParts[1],
-				Type:         cfParts[2],
-				ProjectField: cfParts[3],
-			}
-
-			jiraCustomFields = append(jiraCustomFields, jiraCustomField)
-		}
-	}
-
 	// there has to be an easier way....
 	f := FlagData{
 		Token:         viper.GetString("token"),
@@ -199,20 +134,6 @@ func GetFlags() FlagData {
 		ItemLimit:     viper.GetInt("item-limit"),
 
 		DryRun: viper.GetBool("dry-run"),
-
-		Jira: Jira{
-			Url:    viper.GetString("jira-url"),
-			User:   viper.GetString("jira-user"),
-			Token:  viper.GetString("jira-token"),
-			JQL:    viper.GetString("jira-jql"),
-			Fields: GetStringSliceFixed("jira-fields"),
-			Expand: GetStringSliceFixed("jira-expand"),
-
-			IssueLinkCustomFieldID: viper.GetString("jira-issue-link-custom-field-id"),
-
-			CustomFieldsStr: jiraCustomFieldsStr,
-			CustomFields:    jiraCustomFields,
-		},
 
 		Filters: Filters{
 			Authors:               GetStringSliceFixed("authors"),
