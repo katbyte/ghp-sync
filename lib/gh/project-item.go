@@ -9,7 +9,6 @@ import (
 
 func (p *Project) HasItem(nodeID string) (*bool, error) {
 	if p.ProjectDetails == nil {
-		// todo should we do this automatically or error?
 		return nil, errors.New("project details not loaded yet")
 	}
 
@@ -46,7 +45,6 @@ func (p *Project) HasItem(nodeID string) (*bool, error) {
 
 func (p *Project) AddItem(nodeID string) (*string, error) {
 	if p.ProjectDetails == nil {
-		// todo should we do this automatically or error?
 		return nil, errors.New("project details not loaded yet")
 	}
 
@@ -71,10 +69,8 @@ func (p *Project) AddItem(nodeID string) (*string, error) {
 
 func (p *Project) SetItemStatus(itemId, status string) error {
 	// should this be a method of ProjectItem? (to do this we'll need to figure out how to get all the fields and values
-	// TODO couldn't figure it out today)
 
 	if p.ProjectDetails == nil {
-		// todo should we do this automatically or error?
 		return errors.New("project details not loaded yet")
 	}
 

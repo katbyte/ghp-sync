@@ -8,16 +8,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-// TODO - this is a lot of flags, we should move this to a config file?
-
-// TODO 2 - we should move to the new viper way of doing things https://sagikazarmark.hu/blog/decoding-custom-formats-with-viper/
-
 type FlagData struct {
 	Token         string
 	Repos         []string
 	ProjectOwner  string
 	ProjectNumber int
-	IncludeClosed bool // TODO remove and use filters.States
 	ItemLimit     int
 	DryRun        bool
 	Filters       Filters
@@ -36,7 +31,6 @@ type Filters struct {
 	LabelsAnd []string
 	States    []string
 
-	// todo move this to flags.project.Filters?
 	ProjectStatusIs       string
 	ProjectFieldPopulated []string
 }
@@ -49,7 +43,6 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringSliceVarP(&flags.Repos, "repos", "r", []string{}, "github repo name (GITHUB_REPO) or a set of repos `owner1/repo1,owner2/repo2`")
 	pflags.StringVarP(&flags.ProjectOwner, "project-owner", "o", "", "github project owner (GITHUB_PROJECT_OWNER)")
 	pflags.IntVarP(&flags.ProjectNumber, "project-number", "p", 0, "github project number (GITHUB_PROJECT_NUMBER)")
-	pflags.BoolVarP(&flags.IncludeClosed, "include-closed", "c", false, "include closed issues (GITHUB_INCLUDE_CLOSED)")
 	pflags.IntVarP(&flags.ItemLimit, "item-limit", "", 0, "limit the number of items to process (0 for no limit)")
 
 	pflags.StringSliceVarP(&flags.Filters.Authors, "authors", "a", []string{}, "only sync prs by these authors. ie 'katbyte,author2,author3'")
@@ -71,10 +64,9 @@ func configureFlags(root *cobra.Command) error {
 	// this is too large now, we need to make a config file
 	m := map[string]string{
 		"token":                    "GITHUB_TOKEN",
-		"repos":                    "GITHUB_REPOS", // todo rename this to repos
+		"repos":                    "GITHUB_REPOS",
 		"project-owner":            "GITHUB_PROJECT_OWNER",
 		"project-number":           "GITHUB_PROJECT_NUMBER",
-		"include-closed":           "GITHUB_INCLUDE_CLOSED",
 		"item-limit":               "ITEM_LIMIT",
 		"pr-states":                "GITHUB_PR_STATES",
 		"project-status-is":        "GITHUB_PROJECT_STATUS_IS",
@@ -119,7 +111,7 @@ func GetStringSliceFixed(key string) []string {
 		return s
 	}
 
-	return strings.Split(s[0], ",") // todo trim spaces and ignore empty?
+	return strings.Split(s[0], ",")
 }
 
 func GetFlags() FlagData {
@@ -130,8 +122,7 @@ func GetFlags() FlagData {
 		ProjectNumber: viper.GetInt("project-number"),
 		ProjectOwner:  viper.GetString("project-owner"),
 
-		IncludeClosed: viper.GetBool("include-closed"), // todo remove and use filters.States
-		ItemLimit:     viper.GetInt("item-limit"),
+		ItemLimit: viper.GetInt("item-limit"),
 
 		DryRun: viper.GetBool("dry-run"),
 

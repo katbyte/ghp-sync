@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	c "github.com/gookit/color"
@@ -43,11 +44,15 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 		}
 
 		// get all issues
-		c.Printf("Retrieving all issues for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
+		states := f.Filters.States
 		state := "open"
-		if f.IncludeClosed {
-			state = "all"
+		for _, s := range states {
+			if strings.EqualFold(s, "CLOSED") || strings.EqualFold(s, "ALL") {
+				state = "all"
+				break
+			}
 		}
+		c.Printf("Retrieving all issues for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
 		issues, err := r.GetAllIssues(state)
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)

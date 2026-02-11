@@ -4,10 +4,6 @@ import (
 	"strconv"
 )
 
-//
-// TODO - look for an actual SDK for github projects v2
-//
-
 type Project struct {
 	Owner  string
 	Number int

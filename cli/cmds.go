@@ -24,8 +24,8 @@ func ValidateParams(params []string) func(cmd *cobra.Command, args []string) err
 func Make(cmdName string) (*cobra.Command, error) {
 	root := &cobra.Command{
 		Use:           cmdName + " [command]",
-		Short:         cmdName + "is a small utility to TODO",
-		Long:          `TODO`,
+		Short:         cmdName + " is a small utility to sync GitHub issues and PRs to a project",
+		Long:          `Sync GitHub issues and PRs to a GitHub Project`,
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "repos", "project-owner", "project-number"}),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -81,8 +81,6 @@ func Make(cmdName string) (*cobra.Command, error) {
 		PreRunE:       ValidateParams([]string{"token"}),
 		RunE:          CmdRateLimit,
 	})
-
-	// TODO add CLEAR command to reset a project? other commands to cleanup project?
 
 	if err := configureFlags(root); err != nil {
 		return nil, fmt.Errorf("unable to configure flags: %w", err)
