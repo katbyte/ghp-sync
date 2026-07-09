@@ -25,7 +25,8 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 		baseDelay   = time.Minute
 	)
 
-	args := []string{"api", "graphql", "-f", query}
+	args := make([]string, 0, 4+2*len(params))
+	args = append(args, "api", "graphql", "-f", query)
 
 	for _, p := range params {
 		args = append(args, p[0])

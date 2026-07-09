@@ -143,7 +143,7 @@ func (r Repo) GetAllPullRequestsGQL(states []string, reviewers []string, limit i
 }
 
 func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest {
-	result := make([]PullRequest, 0)
+	result := make([]PullRequest, 0, len(q.Repository.PullRequests.Nodes))
 
 	for _, pullRequest := range q.Repository.PullRequests.Nodes {
 		pr := PullRequest{

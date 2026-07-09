@@ -62,7 +62,7 @@ func configureFlags(root *cobra.Command) error {
 
 	// binding map for viper/pflag -> env
 	// this is too large now, we need to make a config file
-	m := map[string]string{
+	m := map[string]string{ //nolint:gosec // false positive for mapping flag names to env vars
 		"token":                    "GITHUB_TOKEN",
 		"repos":                    "GITHUB_REPOS",
 		"project-owner":            "GITHUB_PROJECT_OWNER",
