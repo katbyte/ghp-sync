@@ -21,6 +21,9 @@ type FlagData struct {
 	PRPopulateFields []string // Only populate these fields (empty = all)
 	PRSkipFields     []string // Skip these fields from population
 	PRFields         []string // Resolved list of field names to populate
+
+	// Linked issue field syncing
+	SyncLinkedIssueFields []string // Copy these fields from linked issues
 }
 
 type Filters struct {
@@ -58,6 +61,9 @@ func configureFlags(root *cobra.Command) error {
 	pflags.StringSliceVar(&flags.PRPopulateFields, "pr-populate-fields", []string{}, "only populate these PR fields (accepts field names or aliases, e.g. 'PR#,open-days')")
 	pflags.StringSliceVar(&flags.PRSkipFields, "pr-skip-fields", []string{}, "skip these PR fields from population (accepts field names or aliases)")
 
+	// Linked issue field syncing
+	pflags.StringSliceVar(&flags.SyncLinkedIssueFields, "sync-linked-issue-fields", []string{}, "copy these field values from linked issues in the project (e.g. 'Status,Due Date,Priority')")
+
 	pflags.BoolVarP(&flags.DryRun, "dry-run", "d", false, "dry run, don't actually add issues/prs to project")
 
 	// binding map for viper/pflag -> env
@@ -78,6 +84,7 @@ func configureFlags(root *cobra.Command) error {
 		"labels-and":               "GITHUB_LABELS_AND",
 		"pr-populate-fields":       "GITHUB_PR_POPULATE_FIELDS",
 		"pr-skip-fields":           "GITHUB_PR_SKIP_FIELDS",
+		"sync-linked-issue-fields": "GITHUB_SYNC_LINKED_ISSUE_FIELDS",
 		"dry-run":                  "",
 	}
 
@@ -139,6 +146,8 @@ func GetFlags() FlagData {
 
 		PRPopulateFields: GetStringSliceFixed("pr-populate-fields"),
 		PRSkipFields:     GetStringSliceFixed("pr-skip-fields"),
+
+		SyncLinkedIssueFields: GetStringSliceFixed("sync-linked-issue-fields"),
 	}
 
 	// Resolve which PR field names to populate

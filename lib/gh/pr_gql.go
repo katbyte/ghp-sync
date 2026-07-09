@@ -25,6 +25,7 @@ type PullRequest struct {
 	FilteredReviewCount        int
 	FilteredReviewCommentCount int
 
+	ClosingIssueNodeIDs      []string
 	Assignees                []string
 	AssociatedLabels         map[string]bool
 	AssociatedProjectNumbers map[int]bool
@@ -84,6 +85,13 @@ type pullRequestsQuery struct {
 						}
 					}
 				} `graphql:"projectItems(first: 10)"`
+
+				ClosingIssuesReferences struct {
+					Nodes []struct {
+						Id     string
+						Number int
+					}
+				} `graphql:"closingIssuesReferences(first: 10)"`
 			}
 
 			PageInfo struct {
@@ -169,6 +177,10 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 
 		for _, project := range pullRequest.ProjectItems.Nodes {
 			pr.AssociatedProjectNumbers[project.Project.Number] = true
+		}
+
+		for _, issue := range pullRequest.ClosingIssuesReferences.Nodes {
+			pr.ClosingIssueNodeIDs = append(pr.ClosingIssueNodeIDs, issue.Id)
 		}
 
 		for _, label := range pullRequest.Labels.Nodes {

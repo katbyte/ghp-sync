@@ -183,6 +183,69 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				continue
 			}
 
+			// Sync fields from linked issues if configured
+			if len(f.SyncLinkedIssueFields) > 0 && len(pr.ClosingIssueNodeIDs) > 0 {
+				c.Printf("  checking %d linked issue(s) for field sync.. ", len(pr.ClosingIssueNodeIDs))
+
+				// Find which linked issues are in the project
+				var foundIssueNodeIDs []string
+				for _, issueNodeID := range pr.ClosingIssueNodeIDs {
+					fieldValues, lookupErr := p.GetItemFieldValuesByNodeID(issueNodeID, f.SyncLinkedIssueFields)
+					if lookupErr != nil {
+						c.Printf("\n    <red>ERROR!!</> looking up linked issue: %s\n", lookupErr)
+						continue
+					}
+					if fieldValues != nil {
+						foundIssueNodeIDs = append(foundIssueNodeIDs, issueNodeID)
+					}
+				}
+
+				if len(foundIssueNodeIDs) == 0 {
+					c.Printf("<gray>no linked issues found in project</>")
+				} else if len(foundIssueNodeIDs) > 1 {
+					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundIssueNodeIDs))
+				} else {
+					// Exactly one linked issue found — get its field values and copy them
+					issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(foundIssueNodeIDs[0], f.SyncLinkedIssueFields)
+					if lookupErr != nil {
+						c.Printf("<red>ERROR!!</> reading linked issue fields: %s", lookupErr)
+					} else if len(issueFieldValues) > 0 {
+						var linkedFields []gh.ProjectItemField
+						for _, fieldName := range f.SyncLinkedIssueFields {
+							fv, ok := issueFieldValues[fieldName]
+							if !ok {
+								continue
+							}
+
+							fieldID, hasField := p.FieldIDs[fieldName]
+							if !hasField {
+								c.Printf("\n    <yellow>WARNING:</> field %q not found in project, skipping", fieldName)
+								continue
+							}
+
+							linkedFields = append(linkedFields, gh.ProjectItemField{
+								Name:    "linked_" + strings.ToLower(strings.NewReplacer(" ", "_", "#", "").Replace(fieldName)),
+								FieldID: fieldID,
+								Type:    fv.Type,
+								Value:   fv.Value,
+							})
+						}
+
+						if len(linkedFields) > 0 {
+							syncErr := p.UpdateItem(*iid, linkedFields)
+							if syncErr != nil {
+								c.Printf("<red>ERROR!!</> syncing linked issue fields: %s", syncErr)
+							} else {
+								c.Printf("<green>synced %d field(s) from linked issue</>", len(linkedFields))
+							}
+						}
+					} else {
+						c.Printf("<gray>linked issue has no values for requested fields</>")
+					}
+				}
+				c.Printf("\n")
+			}
+
 			c.Printf("\n")
 
 			// TODO remove closed PRs? move them to closed status?

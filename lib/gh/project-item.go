@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -344,4 +345,176 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 	}
 
 	return nil
+}
+
+// ProjectItemFieldValue holds a field value read from a project item.
+type ProjectItemFieldValue struct {
+	Type  ItemValueType
+	Value interface{} // string for text/date/singleSelect option ID, float64 for number
+}
+
+// GetItemFieldValuesByNodeID looks up the project item for a given content node ID (e.g. an issue)
+// and returns the field values for the requested field names. The returned map is keyed by field name.
+// If the item is not found in the project, returns nil map with no error.
+func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []string) (map[string]ProjectItemFieldValue, error) {
+	if p.ProjectDetails == nil {
+		return nil, errors.New("project details not loaded yet")
+	}
+
+	// Build dynamic fieldValueByName queries for each requested field
+	fieldFragments := ""
+	for i, name := range fieldNames {
+		alias := fmt.Sprintf("f%d", i)
+		fieldFragments += fmt.Sprintf(`
+						%s:fieldValueByName(name:"%s") {
+							... on ProjectV2ItemFieldTextValue {
+								__typename
+								text
+							}
+							... on ProjectV2ItemFieldNumberValue {
+								__typename
+								number
+							}
+							... on ProjectV2ItemFieldDateValue {
+								__typename
+								date
+							}
+							... on ProjectV2ItemFieldSingleSelectValue {
+								__typename
+								singleSelectOptionId: optionId
+							}
+						}`, alias, name)
+	}
+
+	q := fmt.Sprintf(`query=
+		query($org: String!, $number: Int!, $cursor: String) {
+			organization(login: $org) {
+				projectV2(number: $number) {
+					items(first: 100, after: $cursor) {
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
+						nodes {
+							id
+							content {
+								... on Issue {
+									id
+								}
+								... on PullRequest {
+									id
+								}
+							}
+							%s
+						}
+					}
+				}
+			}
+		}
+	`, fieldFragments)
+
+	params := [][]string{
+		{"-f", "org=" + p.Owner},
+		{"-F", "number=" + strconv.Itoa(p.Number)},
+	}
+
+	// We need a dynamic result type since field names are dynamic
+	type fieldValue struct {
+		Typename             string  `json:"__typename"`
+		Text                 string  `json:"text"`
+		Number               float64 `json:"number"`
+		Date                 string  `json:"date"`
+		SingleSelectOptionID string  `json:"singleSelectOptionId"`
+	}
+
+	type itemNode struct {
+		ID      string `json:"id"`
+		Content struct {
+			ID string `json:"id"`
+		} `json:"content"`
+		// Dynamic field values will be parsed from raw JSON
+	}
+
+	type queryResult struct {
+		Data struct {
+			Organization struct {
+				ProjectV2 struct {
+					Items struct {
+						PageInfo struct {
+							HasNextPage bool   `json:"hasNextPage"`
+							EndCursor   string `json:"endCursor"`
+						} `json:"pageInfo"`
+						Nodes []json.RawMessage `json:"nodes"`
+					} `json:"items"`
+				} `json:"projectV2"`
+			} `json:"organization"`
+		} `json:"data"`
+	}
+
+	var cursor string
+	for {
+		queryParams := make([][]string, len(params))
+		copy(queryParams, params)
+		if cursor != "" {
+			queryParams = append(queryParams, []string{"-f", "cursor=" + cursor})
+		}
+
+		var result queryResult
+		if err := p.GraphQLQueryUnmarshal(q, queryParams, &result); err != nil {
+			return nil, fmt.Errorf("querying project items for field values: %w", err)
+		}
+
+		for _, rawNode := range result.Data.Organization.ProjectV2.Items.Nodes {
+			// Parse the node to get the content ID
+			var node itemNode
+			if err := json.Unmarshal(rawNode, &node); err != nil {
+				continue
+			}
+
+			if node.Content.ID != contentNodeID {
+				continue
+			}
+
+			// Found the item — parse the field values
+			var rawMap map[string]json.RawMessage
+			if err := json.Unmarshal(rawNode, &rawMap); err != nil {
+				return nil, fmt.Errorf("parsing item fields: %w", err)
+			}
+
+			result := map[string]ProjectItemFieldValue{}
+			for i, name := range fieldNames {
+				alias := fmt.Sprintf("f%d", i)
+				raw, ok := rawMap[alias]
+				if !ok || string(raw) == "null" || string(raw) == "{}" {
+					continue
+				}
+
+				var fv fieldValue
+				if err := json.Unmarshal(raw, &fv); err != nil {
+					continue
+				}
+
+				switch fv.Typename {
+				case "ProjectV2ItemFieldTextValue":
+					result[name] = ProjectItemFieldValue{Type: ItemValueTypeText, Value: fv.Text}
+				case "ProjectV2ItemFieldNumberValue":
+					result[name] = ProjectItemFieldValue{Type: ItemValueTypeNumber, Value: fv.Number}
+				case "ProjectV2ItemFieldDateValue":
+					result[name] = ProjectItemFieldValue{Type: ItemValueTypeDate, Value: fv.Date}
+				case "ProjectV2ItemFieldSingleSelectValue":
+					result[name] = ProjectItemFieldValue{Type: ItemValueTypeSingleSelect, Value: fv.SingleSelectOptionID}
+				}
+			}
+
+			return result, nil
+		}
+
+		if !result.Data.Organization.ProjectV2.Items.PageInfo.HasNextPage {
+			break
+		}
+		cursor = result.Data.Organization.ProjectV2.Items.PageInfo.EndCursor
+	}
+
+	// Item not found in project
+	return nil, nil
 }

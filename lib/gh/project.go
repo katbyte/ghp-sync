@@ -38,8 +38,11 @@ type ProjectDetails struct {
 			Name string
 		}
 	}
-	FieldIDs  map[string]string
-	StatusIDs map[string]string
+	FieldIDs                map[string]string
+	StatusIDs               map[string]string
+	FieldTypes              map[string]ItemValueType     // field name -> type
+	SingleSelectOptionIDs   map[string]map[string]string // field name -> option name -> option ID
+	SingleSelectOptionNames map[string]map[string]string // field name -> option ID -> option name
 }
 
 type ProjectDetailsResult struct {
@@ -100,9 +103,12 @@ func (p *Project) LoadDetails() error {
 	}
 
 	project := ProjectDetails{
-		ID:        result.Data.Organization.ProjectV2.ID,
-		FieldIDs:  map[string]string{},
-		StatusIDs: map[string]string{},
+		ID:                      result.Data.Organization.ProjectV2.ID,
+		FieldIDs:                map[string]string{},
+		StatusIDs:               map[string]string{},
+		FieldTypes:              map[string]ItemValueType{},
+		SingleSelectOptionIDs:   map[string]map[string]string{},
+		SingleSelectOptionNames: map[string]map[string]string{},
 	}
 
 	for _, f := range result.Data.Organization.ProjectV2.Fields.Nodes {
@@ -118,7 +124,11 @@ func (p *Project) LoadDetails() error {
 			Name: f.Name,
 		}
 
-		if f.Name == "Status" {
+		if len(f.Options) > 0 {
+			// This is a single-select field
+			project.FieldTypes[f.Name] = ItemValueTypeSingleSelect
+			project.SingleSelectOptionIDs[f.Name] = map[string]string{}
+			project.SingleSelectOptionNames[f.Name] = map[string]string{}
 			for _, s := range f.Options {
 				field.Options = append(field.Options, struct {
 					ID   string
@@ -127,7 +137,13 @@ func (p *Project) LoadDetails() error {
 					ID:   s.ID,
 					Name: s.Name,
 				})
+				project.SingleSelectOptionIDs[f.Name][s.Name] = s.ID
+				project.SingleSelectOptionNames[f.Name][s.ID] = s.Name
 			}
+		} else {
+			// Default to text for regular fields — number/date are indistinguishable
+			// from the current query but UpdateItem handles them by type
+			project.FieldTypes[f.Name] = ItemValueTypeText
 		}
 
 		project.Fields = append(project.Fields, field)
