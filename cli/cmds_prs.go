@@ -131,7 +131,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					}
 
 					// check for blocked milestone removal
-					if t.GetEvent() == "unlabeled" {
+					if t.GetEvent() == "demilestoned" {
 						if t.Milestone.GetTitle() == "Blocked" {
 							daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
 							break

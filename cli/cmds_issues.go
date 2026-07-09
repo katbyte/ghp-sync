@@ -154,7 +154,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 					}
 				`
 
-			p := [][]string{
+			params := [][]string{
 				{"-f", "project=" + p.ID},
 				{"-f", "item=" + *iid},
 				{"-f", "user_field=" + p.FieldIDs["User"]},
@@ -165,7 +165,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 				{"-F", fmt.Sprintf("daysSinceCreation_value=%d", daysSinceCreation)},
 			}
 
-			out, err := r.GraphQLQuery(q, p)
+			out, err := r.GraphQLQuery(q, params)
 			if err != nil {
 				c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
 				return nil

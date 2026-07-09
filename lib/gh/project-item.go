@@ -89,6 +89,10 @@ type ProjectItemsResult struct {
 			ProjectV2 struct {
 				ID    string `json:"id"`
 				Items struct {
+					PageInfo struct {
+						HasNextPage bool   `json:"hasNextPage"`
+						EndCursor   string `json:"endCursor"`
+					} `json:"pageInfo"`
 					Nodes []struct {
 						ID     string `json:"id"`
 						Type   string `json:"type"`
@@ -132,11 +136,15 @@ type ProjectItemFieldNameAndType struct {
 // todo: allow configure the fields we want to get
 func (p *Project) GetItems() ([]ProjectItem, error) {
 	q := `query=
-		query($org: String!, $number: Int!) {
+		query($org: String!, $number: Int!, $cursor: String) {
 			organization(login: $org) {
 				projectV2(number: $number) {
 					id
-					items(first: 100) {
+					items(first: 100, after: $cursor) {
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
 						nodes {
 							id
 							type
@@ -174,41 +182,52 @@ func (p *Project) GetItems() ([]ProjectItem, error) {
 		}
     `
 
-	params := [][]string{
-		{"-f", "org=" + p.Owner},
-		{"-F", "number=" + strconv.Itoa(p.Number)},
+	var allItems []ProjectItem
+	var cursor string
+
+	for {
+		params := [][]string{
+			{"-f", "org=" + p.Owner},
+			{"-F", "number=" + strconv.Itoa(p.Number)},
+		}
+		if cursor != "" {
+			params = append(params, []string{"-f", "cursor=" + cursor})
+		}
+
+		var result ProjectItemsResult
+		if err := p.GraphQLQueryUnmarshal(q, params, &result); err != nil {
+			return nil, err
+		}
+
+		for _, i := range result.Data.Organization.ProjectV2.Items.Nodes {
+			item := ProjectItem{
+				ID:     i.ID,
+				Type:   i.Type,
+				Title:  i.Content.Title,
+				URL:    i.Content.URL,
+				NodeID: i.Content.ID,
+			}
+
+			if i.Status != nil {
+				item.Status = i.Status.SingleSelectOptionID
+			}
+			if i.RequestType != nil {
+				item.RequestType = i.RequestType.Text
+			}
+			if i.DueDate != nil {
+				item.DueDate = i.DueDate.Date
+			}
+
+			allItems = append(allItems, item)
+		}
+
+		if !result.Data.Organization.ProjectV2.Items.PageInfo.HasNextPage {
+			break
+		}
+		cursor = result.Data.Organization.ProjectV2.Items.PageInfo.EndCursor
 	}
 
-	var result ProjectItemsResult
-	if err := p.GraphQLQueryUnmarshal(q, params, &result); err != nil {
-		return nil, err
-	}
-
-	nodes := result.Data.Organization.ProjectV2.Items.Nodes
-	items := make([]ProjectItem, len(nodes))
-	for _, i := range nodes {
-		item := ProjectItem{
-			ID:     i.ID,
-			Type:   i.Type,
-			Title:  i.Content.Title,
-			URL:    i.Content.URL,
-			NodeID: i.Content.ID,
-		}
-
-		if i.Status != nil {
-			item.Status = i.Status.SingleSelectOptionID
-		}
-		if i.RequestType != nil {
-			item.RequestType = i.RequestType.Text
-		}
-		if i.DueDate != nil {
-			item.DueDate = i.DueDate.Date
-		}
-
-		items = append(items, item)
-	}
-
-	return items, nil
+	return allItems, nil
 }
 
 // create a project item field type NUMBER STRING

@@ -18,7 +18,7 @@ func createLogger() *logrus.Logger {
 	customFormatter.FullTimestamp = true
 	l.SetFormatter(customFormatter)
 
-	lls := os.Getenv("TCTEST_LOG")
+	lls := os.Getenv("GHP_SYNC_LOG")
 	if lls == "" {
 		lls = "WARN"
 	}
@@ -26,7 +26,7 @@ func createLogger() *logrus.Logger {
 	ll, err := logrus.ParseLevel(lls)
 	if err != nil {
 		l.SetLevel(logrus.TraceLevel)
-		l.Errorf("defaulting to TRACE: unable to parse `TCTEST_LOG` into a valid log level %v", err)
+		l.Errorf("defaulting to TRACE: unable to parse `GHP_SYNC_LOG` into a valid log level %v", err)
 	} else {
 		l.SetLevel(ll)
 	}

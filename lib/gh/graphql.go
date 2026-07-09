@@ -22,7 +22,7 @@ func (t Token) GraphQLQueryUnmarshal(query string, params [][]string, data inter
 func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 	const (
 		maxAttempts = 5
-		baseDelay   = time.Minute
+		baseDelay   = time.Second
 	)
 
 	args := make([]string, 0, 4+2*len(params))

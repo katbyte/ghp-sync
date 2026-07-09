@@ -42,7 +42,10 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 		return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
 	}
 	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		if resp.StatusCode == 403 {
+		if err != nil {
+			return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+		}
+		if resp != nil && resp.StatusCode == 403 {
 			return true, nil
 		}
 
@@ -50,13 +53,16 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	}
 
 	if t := t.Token; t != nil {
-		t := oauth2.StaticTokenSource(
+		src := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: *t},
 		)
-		retryClient.HTTPClient = oauth2.NewClient(ctx, t)
+		retryClient.HTTPClient = oauth2.NewClient(ctx, src)
 	}
 
-	return github.NewClient(retryClient.StandardClient()), ctx
+	// Wrap via StandardClient so the retryable transport stays in the chain
+	httpClient := retryClient.StandardClient()
+
+	return github.NewClient(httpClient), ctx
 }
 
 // todo we may want to update the above retry logic to match this one
