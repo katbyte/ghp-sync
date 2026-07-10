@@ -57,10 +57,10 @@ func (r Repo) GetAllIssueEvents(number int) (*[]github.Timeline, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all prs for %s/%s: %w", r.Owner, r.Name, err)
+		return nil, fmt.Errorf("failed to get all events for %s/%s: %w", r.Owner, r.Name, err)
 	}
 
-	// sort ascending?
+	// sort descending (most recent first) so callers can break on the first match
 	sort.Slice(allEvents, func(a, b int) bool {
 		dateA := allEvents[a].CreatedAt
 		if dateA == nil {

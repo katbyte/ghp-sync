@@ -394,6 +394,9 @@ func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []
 	fieldFragments := ""
 	for i, name := range fieldNames {
 		alias := fmt.Sprintf("f%d", i)
+		// Escape quotes and backslashes to prevent GraphQL injection
+		safeName := strings.ReplaceAll(name, `\`, `\\`)
+		safeName = strings.ReplaceAll(safeName, `"`, `\"`)
 		fieldFragments += fmt.Sprintf(`
 						%s:fieldValueByName(name:"%s") {
 							... on ProjectV2ItemFieldTextValue {
@@ -412,7 +415,7 @@ func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []
 								__typename
 								singleSelectOptionId: optionId
 							}
-						}`, alias, name)
+						}`, alias, safeName)
 	}
 
 	q := fmt.Sprintf(`query=

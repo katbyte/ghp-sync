@@ -103,7 +103,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				c.Printf("  <yellow>In Progress</> <gray>(draft)</>\n")
 			case pr.State == "":
 				statusText = "In Progress"
-				c.Printf("  <yellow>In Progress</> <gray>(draft)</>\n")
+				c.Printf("  <yellow>In Progress</> <gray>(unknown state)</>\n")
 			case pr.AssociatedLabels["waiting-response"]:
 				statusText = "In Progress"
 				c.Printf("  <lightGreen>Waiting for Response</> <gray>(label)</>\n")
@@ -190,31 +190,29 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			if len(f.SyncLinkedIssueFields) > 0 && len(pr.ClosingIssueNodeIDs) > 0 {
 				c.Printf("  checking %d linked issue(s) for field sync.. ", len(pr.ClosingIssueNodeIDs))
 
-				// Find which linked issues are in the project, caching their field values
-				type linkedIssueMatch struct {
-					nodeID      string
-					fieldValues map[string]gh.ProjectItemFieldValue
-				}
-				var foundMatches []linkedIssueMatch
+				// Find which linked issues are in the project using efficient HasItem checks
+				var foundIssueNodeIDs []string
 				for _, issueNodeID := range pr.ClosingIssueNodeIDs {
-					fieldValues, lookupErr := p.GetItemFieldValuesByNodeID(issueNodeID, f.SyncLinkedIssueFields)
+					itemID, lookupErr := p.HasItem(issueNodeID)
 					if lookupErr != nil {
 						c.Printf("\n    <red>ERROR!!</> looking up linked issue: %s\n", lookupErr)
 						continue
 					}
-					if fieldValues != nil {
-						foundMatches = append(foundMatches, linkedIssueMatch{issueNodeID, fieldValues})
+					if itemID != nil {
+						foundIssueNodeIDs = append(foundIssueNodeIDs, issueNodeID)
 					}
 				}
 
-				if len(foundMatches) == 0 {
+				if len(foundIssueNodeIDs) == 0 {
 					c.Printf("<gray>no linked issues found in project</>")
-				} else if len(foundMatches) > 1 {
-					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundMatches))
+				} else if len(foundIssueNodeIDs) > 1 {
+					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundIssueNodeIDs))
 				} else {
-					// Exactly one linked issue found — use cached field values
-					issueFieldValues := foundMatches[0].fieldValues
-					if len(issueFieldValues) > 0 {
+					// Exactly one linked issue found — fetch its field values
+					issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(foundIssueNodeIDs[0], f.SyncLinkedIssueFields)
+					if lookupErr != nil {
+						c.Printf("<red>ERROR!!</> reading linked issue fields: %s", lookupErr)
+					} else if len(issueFieldValues) > 0 {
 						var linkedFields []gh.ProjectItemField
 						for _, fieldName := range f.SyncLinkedIssueFields {
 							fv, ok := issueFieldValues[fieldName]
