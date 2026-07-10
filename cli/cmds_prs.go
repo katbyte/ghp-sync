@@ -105,7 +105,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				statusText = "In Progress"
 				c.Printf("  <yellow>In Progress</> <gray>(unknown state)</>\n")
 			case pr.AssociatedLabels["waiting-response"]:
-				statusText = "In Progress"
+				statusText = "Waiting for Response"
 				c.Printf("  <lightGreen>Waiting for Response</> <gray>(label)</>\n")
 			default:
 				statusText = "Waiting"

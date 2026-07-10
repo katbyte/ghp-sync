@@ -104,71 +104,31 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			}
 			c.Printf("<magenta>%s</>", *iid)
 
-			// TODO switch to gh.UpdateItem
-			q := `query=
-					mutation (
-					  $project:ID!, $item:ID!, 
-					  $issue_field:ID!, $issue_value:String!, 
-                      $user_field:ID!, $user_value:String!, 
-					  $daysSinceCreation_field:ID!, $daysSinceCreation_value:Float!, 
-					) {
-					  set_issue: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $issue_field
-						value: { 
-						  text: $issue_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-                      set_user: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $user_field
-						value: { 
-						  text: $user_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					  set_dopen: updateProjectV2ItemFieldValue(input: {
-						projectId: $project
-						itemId: $item
-						fieldId: $daysSinceCreation_field
-						value: { 
-						  number: $daysSinceCreation_value
-						}
-					  }) {
-						projectV2Item {
-						  id
-						  }
-					  }
-					}
-				`
-
-			params := [][]string{
-				{"-f", "project=" + p.ID},
-				{"-f", "item=" + *iid},
-				{"-f", "user_field=" + p.FieldIDs["User"]},
-				{"-f", "user_value=" + issue.User.GetLogin()},
-				{"-f", "issue_field=" + p.FieldIDs["Issue#"]},
-				{"-f", fmt.Sprintf("issue_value=%d", *issue.Number)},
-				{"-f", "daysSinceCreation_field=" + p.FieldIDs["Age"]},
-				{"-F", fmt.Sprintf("daysSinceCreation_value=%d", daysSinceCreation)},
+			fields := []gh.ProjectItemField{
+				{
+					Name:    "issue_number",
+					FieldID: p.FieldIDs["Issue#"],
+					Type:    gh.ItemValueTypeText,
+					Value:   fmt.Sprintf("%d", *issue.Number),
+				},
+				{
+					Name:    "user",
+					FieldID: p.FieldIDs["User"],
+					Type:    gh.ItemValueTypeText,
+					Value:   issue.User.GetLogin(),
+				},
+				{
+					Name:    "age",
+					FieldID: p.FieldIDs["Age"],
+					Type:    gh.ItemValueTypeNumber,
+					Value:   daysSinceCreation,
+				},
 			}
 
-			out, err := r.GraphQLQuery(q, params)
+			err = p.UpdateItem(*iid, fields)
 			if err != nil {
-				outStr := ""
-				if out != nil {
-					outStr = *out
-				}
-				return fmt.Errorf("updating issue #%d fields: %w\noutput: %s", issue.GetNumber(), err, outStr)
+				c.Printf("<red>ERROR!!</> %s\n", err)
+				continue
 			}
 
 			c.Printf("\n")
