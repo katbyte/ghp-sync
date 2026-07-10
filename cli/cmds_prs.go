@@ -19,17 +19,16 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
 	err := p.LoadDetails()
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("loading project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", p.ID)
 
 	// todo we can probably remove this? its just for printing the fields (we do this multiple times so maybe just a helper)
-	for _, f := range p.Fields {
-		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
+	for _, field := range p.Fields {
+		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", field.Name, field.ID)
 
-		if f.Name == "Status" {
-			for _, s := range f.Options {
+		if field.Name == "Status" {
+			for _, s := range field.Options {
 				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.ID)
 			}
 		}
@@ -40,8 +39,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	for _, repo := range f.Repos {
 		r, err := gh.NewRepo(repo, f.Token)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s", err)
-			return nil
+			return fmt.Errorf("creating repo %s: %w", repo, err)
 		}
 
 		limitMsg := ""
@@ -55,27 +53,30 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			fmt.Printf("%d ", i)
 		})
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
-			return nil
+			return fmt.Errorf("getting PRs for %s/%s: %w", r.Owner, r.Name, err)
 		}
 		c.Printf("<yellow>%d</> items\n", len(*prs))
 		prs = FilterByFlags(f, prs)
 
 		byStatus := map[string][]int{}
 
-		var totalWaiting, totalDaysWaiting int
-
 		for _, pr := range *prs {
 			prNode := pr.NodeID
 
 			// flat := strings.Replace(strings.Replace(q, "\n", " ", -1), "\t", "", -1)
 			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.Number, prNode)
-			iid, err := p.AddItem(prNode)
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s", err)
-				continue
+
+			var iid *string
+			if !f.DryRun {
+				iid, err = p.AddItem(prNode)
+				if err != nil {
+					c.Printf("\n\n <red>ERROR!!</> %s", err)
+					continue
+				}
+				c.Printf("<magenta>%s</>", *iid)
+			} else {
+				c.Printf("<yellow>[dry-run]</>")
 			}
-			c.Printf("<magenta>%s</>", *iid)
 
 			daysOpen := int(time.Since(pr.CreatedAt) / (time.Hour * 24))
 			daysWaiting := 0
@@ -112,12 +113,10 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 				// calculate days waiting
 				daysWaiting = daysOpen
-				totalWaiting++
 
 				events, err := r.GetAllIssueEvents(pr.Number)
 				if err != nil {
-					c.Printf("\n\n <red>ERROR!!</> %s\n", err)
-					return nil
+					return fmt.Errorf("getting events for PR %d: %w", pr.Number, err)
 				}
 				c.Printf(" with <magenta>%d</> events\n", len(*events))
 
@@ -139,7 +138,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					}
 				}
 
-				totalDaysWaiting += daysWaiting
+
 			}
 
 			byStatus[statusText] = append(byStatus[statusText], pr.Number)
@@ -177,18 +176,26 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				})
 			}
 
-			err = p.UpdateItem(*iid, fields)
-			if err != nil {
-				c.Printf("<red>ERROR!!</> %s\n\n", err)
-				continue
+			if !f.DryRun && iid != nil {
+				err = p.UpdateItem(*iid, fields)
+				if err != nil {
+					c.Printf("<red>ERROR!!</> %s\n\n", err)
+					continue
+				}
+			} else if f.DryRun {
+				c.Printf(" <yellow>[dry-run: would update %d fields]</>", len(fields))
 			}
 
 			// Sync fields from linked issues if configured
 			if len(f.SyncLinkedIssueFields) > 0 && len(pr.ClosingIssueNodeIDs) > 0 {
 				c.Printf("  checking %d linked issue(s) for field sync.. ", len(pr.ClosingIssueNodeIDs))
 
-				// Find which linked issues are in the project
-				var foundIssueNodeIDs []string
+				// Find which linked issues are in the project, caching their field values
+				type linkedIssueMatch struct {
+					nodeID      string
+					fieldValues map[string]gh.ProjectItemFieldValue
+				}
+				var foundMatches []linkedIssueMatch
 				for _, issueNodeID := range pr.ClosingIssueNodeIDs {
 					fieldValues, lookupErr := p.GetItemFieldValuesByNodeID(issueNodeID, f.SyncLinkedIssueFields)
 					if lookupErr != nil {
@@ -196,20 +203,18 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 						continue
 					}
 					if fieldValues != nil {
-						foundIssueNodeIDs = append(foundIssueNodeIDs, issueNodeID)
+						foundMatches = append(foundMatches, linkedIssueMatch{issueNodeID, fieldValues})
 					}
 				}
 
-				if len(foundIssueNodeIDs) == 0 {
+				if len(foundMatches) == 0 {
 					c.Printf("<gray>no linked issues found in project</>")
-				} else if len(foundIssueNodeIDs) > 1 {
-					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundIssueNodeIDs))
+				} else if len(foundMatches) > 1 {
+					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundMatches))
 				} else {
-					// Exactly one linked issue found — get its field values and copy them
-					issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(foundIssueNodeIDs[0], f.SyncLinkedIssueFields)
-					if lookupErr != nil {
-						c.Printf("<red>ERROR!!</> reading linked issue fields: %s", lookupErr)
-					} else if len(issueFieldValues) > 0 {
+					// Exactly one linked issue found — use cached field values
+					issueFieldValues := foundMatches[0].fieldValues
+					if len(issueFieldValues) > 0 {
 						var linkedFields []gh.ProjectItemField
 						for _, fieldName := range f.SyncLinkedIssueFields {
 							fv, ok := issueFieldValues[fieldName]
@@ -232,11 +237,15 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 						}
 
 						if len(linkedFields) > 0 {
-							syncErr := p.UpdateItem(*iid, linkedFields)
-							if syncErr != nil {
-								c.Printf("<red>ERROR!!</> syncing linked issue fields: %s", syncErr)
-							} else {
-								c.Printf("<green>synced %d field(s) from linked issue</>", len(linkedFields))
+							if !f.DryRun && iid != nil {
+								syncErr := p.UpdateItem(*iid, linkedFields)
+								if syncErr != nil {
+									c.Printf("<red>ERROR!!</> syncing linked issue fields: %s", syncErr)
+								} else {
+									c.Printf("<green>synced %d field(s) from linked issue</>", len(linkedFields))
+								}
+							} else if f.DryRun {
+								c.Printf("<yellow>[dry-run: would sync %d field(s)]</>", len(linkedFields))
 							}
 						}
 					} else {

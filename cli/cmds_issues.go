@@ -19,17 +19,16 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
 	err := p.LoadDetails()
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("loading project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", p.ID)
 
 	// todo we can probably remove this? its just for printing the fields
-	for _, f := range p.Fields {
-		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
+	for _, field := range p.Fields {
+		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", field.Name, field.ID)
 
-		if f.Name == "Status" {
-			for _, s := range f.Options {
+		if field.Name == "Status" {
+			for _, s := range field.Options {
 				c.Printf("      <blue>%s</> <> <cyan>%s</>\n", s.Name, s.ID)
 			}
 		}
@@ -39,8 +38,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	for _, repo := range f.Repos {
 		r, err := gh.NewRepo(repo, f.Token)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s", err)
-			return nil
+			return fmt.Errorf("creating repo %s: %w", repo, err)
 		}
 
 		// get all issues
@@ -55,8 +53,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 		c.Printf("Retrieving all issues for <white>%s</>/<cyan>%s</>...", r.Owner, r.Name)
 		issues, err := r.GetAllIssues(state)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
-			return nil
+			return fmt.Errorf("getting issues for %s/%s: %w", r.Owner, r.Name, err)
 		}
 		c.Printf(" found <yellow>%d</>\n", len(*issues))
 
@@ -76,10 +73,10 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 
 			// only put issues labelled whatever flag is passed (bug, etc) into the project, therefore graphyQL is inside this loop
 			sync := false
-			for _, f := range filters {
-				match, err := f.Issue(issue)
+			for _, filter := range filters {
+				match, err := filter.Issue(issue)
 				if err != nil {
-					return fmt.Errorf("ERROR: running filter %s: %w", f.Name, err)
+					return fmt.Errorf("ERROR: running filter %s: %w", filter.Name, err)
 				}
 				if match {
 					sync = true
@@ -167,8 +164,11 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 
 			out, err := r.GraphQLQuery(q, params)
 			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s\n%s", err, *out)
-				return nil
+				outStr := ""
+				if out != nil {
+					outStr = *out
+				}
+				return fmt.Errorf("updating issue #%d fields: %w\noutput: %s", issue.GetNumber(), err, outStr)
 			}
 
 			c.Printf("\n")

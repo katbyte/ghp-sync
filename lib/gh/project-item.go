@@ -8,40 +8,72 @@ import (
 	"strings"
 )
 
-func (p *Project) HasItem(nodeID string) (*bool, error) {
+// HasItem checks whether a given content node (issue or PR) is already in this project.
+// Returns the project item ID if found, nil if not found.
+func (p *Project) HasItem(nodeID string) (*string, error) {
 	if p.ProjectDetails == nil {
 		return nil, errors.New("project details not loaded yet")
 	}
 
-	return nil, errors.New("not implemented")
-
-	// couldn't get this to work
-	/*q := `query=
-	        query($project:ID!, $pr:ID!) {
-	          projectV2(id: $project) {
-	            items(first: 1, filterBy: {contentId: $pr}) {
-	              nodes {
-	                id
-	              }
-	            }
-	          }
-	        }
-	    `
-
-		fields := [][]string{
-			{"-f", "pr=" + nodeID},
-			{"-f", "project=" + p.ID},
+	// Query the node directly and check its projectItems for our project
+	q := `query=
+		query($nodeId: ID!) {
+			node(id: $nodeId) {
+				... on Issue {
+					projectItems(first: 50) {
+						nodes {
+							id
+							project {
+								id
+							}
+						}
+					}
+				}
+				... on PullRequest {
+					projectItems(first: 50) {
+						nodes {
+							id
+							project {
+								id
+							}
+						}
+					}
+				}
+			}
 		}
+	`
 
-		// Execute the GraphQL query
-		result, err := p.GraphQLQuery(q, fields)
-		if err != nil {
-			return nil, err
+	params := [][]string{
+		{"-f", "nodeId=" + nodeID},
+	}
+
+	type hasItemResult struct {
+		Data struct {
+			Node struct {
+				ProjectItems struct {
+					Nodes []struct {
+						ID      string `json:"id"`
+						Project struct {
+							ID string `json:"id"`
+						} `json:"project"`
+					} `json:"nodes"`
+				} `json:"projectItems"`
+			} `json:"node"`
+		} `json:"data"`
+	}
+
+	var result hasItemResult
+	if err := p.GraphQLQueryUnmarshal(q, params, &result); err != nil {
+		return nil, fmt.Errorf("checking if item exists in project: %w", err)
+	}
+
+	for _, item := range result.Data.Node.ProjectItems.Nodes {
+		if item.Project.ID == p.ID {
+			return &item.ID, nil
 		}
+	}
 
-		// Convert the result to a boolean
-		exists := result != nil && *result == "true"
-		return &exists, nil*/
+	return nil, nil
 }
 
 func (p *Project) AddItem(nodeID string) (*string, error) {
@@ -129,10 +161,7 @@ type ProjectItem struct {
 	NodeID      string // actual pr/issue node id
 }
 
-type ProjectItemFieldNameAndType struct {
-	Name string        // The field name as it appears in GitHub's Project
-	Type ItemValueType // The field type
-}
+
 
 // todo: allow configure the fields we want to get
 func (p *Project) GetItems() ([]ProjectItem, error) {

@@ -15,8 +15,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 	sourceProjectOwner := args[0]
 	sourceProjectNumber, err := strconv.Atoi(args[1])
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("invalid project number %q: %w", args[1], err)
 	}
 
 	source := gh.NewProject(sourceProjectOwner, sourceProjectNumber, f.Token)
@@ -25,20 +24,18 @@ func CmdSync(_ *cobra.Command, args []string) error {
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
 	err = destination.LoadDetails()
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("loading destination project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", destination.ID)
 
 	// print the fields of the destination project
-	for _, f := range destination.Fields {
-		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", f.Name, f.ID)
+	for _, field := range destination.Fields {
+		c.Printf("    <lightBlue>%s</> <> <lightCyan>%s</>\n", field.Name, field.ID)
 	}
 	c.Printf(" getting existing items.. ")
 	dstItems, err := destination.GetItems()
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("getting destination items: %w", err)
 	}
 	c.Printf("  <yellow>%d</>\n\n\n", len(dstItems))
 
@@ -50,8 +47,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 	c.Printf("Getting items from source <green>%s</>/<lightGreen>%d</>...", source.Owner, source.Number)
 	srcItems, err := source.GetItems()
 	if err != nil {
-		c.Printf("\n\n <red>ERROR!!</> %s", err)
-		return nil
+		return fmt.Errorf("getting source items: %w", err)
 	}
 	c.Printf("  <white>%d</>\n", len(srcItems))
 
@@ -69,21 +65,18 @@ func CmdSync(_ *cobra.Command, args []string) error {
 		// parse the url (todo handle issues?)
 		owner, name, _, number, err := gh.ParseGitHubURL(srcItem.URL)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> parsing gh url %s:  %s", srcItem.URL, err)
-			return nil
+			return fmt.Errorf("parsing github url %s: %w", srcItem.URL, err)
 		}
 
 		// get the pr via rest
 		r, err := gh.NewRepo(owner+"/"+name, f.Token)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s", err)
-			return nil
+			return fmt.Errorf("creating repo %s/%s: %w", owner, name, err)
 		}
 
 		pr, err := r.GetPullRequest(number)
 		if err != nil {
-			c.Printf("\n\n <red>ERROR!!</> %s", err)
-			return nil
+			return fmt.Errorf("getting PR %d: %w", number, err)
 		}
 
 		nodeID := *pr.NodeID
