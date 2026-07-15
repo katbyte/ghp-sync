@@ -7,6 +7,11 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+type ClosingIssue struct {
+	NodeID string
+	Number int
+}
+
 type PullRequest struct {
 	NodeID                     string
 	Author                     string
@@ -25,7 +30,7 @@ type PullRequest struct {
 	FilteredReviewCount        int
 	FilteredReviewCommentCount int
 
-	ClosingIssueNodeIDs      []string
+	ClosingIssues            []ClosingIssue
 	Assignees                []string
 	AssociatedLabels         map[string]bool
 	AssociatedProjectNumbers map[int]bool
@@ -180,7 +185,10 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 		}
 
 		for _, issue := range pullRequest.ClosingIssuesReferences.Nodes {
-			pr.ClosingIssueNodeIDs = append(pr.ClosingIssueNodeIDs, issue.Id)
+			pr.ClosingIssues = append(pr.ClosingIssues, ClosingIssue{
+				NodeID: issue.Id,
+				Number: issue.Number,
+			})
 		}
 
 		for _, label := range pullRequest.Labels.Nodes {

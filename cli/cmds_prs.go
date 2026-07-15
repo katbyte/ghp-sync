@@ -35,6 +35,46 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 
+	// Print config summary
+	c.Printf("<white>Configuration:</>\n")
+	c.Printf("  <lightBlue>repos</>:        ")
+	for i, repo := range f.Repos {
+		if i > 0 {
+			c.Printf("<gray>,</> ")
+		}
+		c.Printf("<cyan>%s</>", repo)
+	}
+	c.Printf("\n")
+	c.Printf("  <lightBlue>pr states</>:    <green>%s</>\n", strings.Join(f.Filters.States, ", "))
+	if len(f.Filters.Authors) > 0 {
+		c.Printf("  <lightBlue>authors</>:      <yellow>%s</>\n", strings.Join(f.Filters.Authors, ", "))
+	}
+	if len(f.Filters.Assignees) > 0 {
+		c.Printf("  <lightBlue>assignees</>:    <yellow>%s</>\n", strings.Join(f.Filters.Assignees, ", "))
+	}
+	if len(f.Filters.Reviewers) > 0 {
+		c.Printf("  <lightBlue>reviewers</>:    <yellow>%s</>\n", strings.Join(f.Filters.Reviewers, ", "))
+	}
+	if len(f.Filters.LabelsOr) > 0 {
+		c.Printf("  <lightBlue>labels (or)</>:  <yellow>%s</>\n", strings.Join(f.Filters.LabelsOr, ", "))
+	}
+	if len(f.Filters.LabelsAnd) > 0 {
+		c.Printf("  <lightBlue>labels (and)</>: <yellow>%s</>\n", strings.Join(f.Filters.LabelsAnd, ", "))
+	}
+	c.Printf("  <lightBlue>pr fields</>:    <lightGreen>%s</>\n", strings.Join(f.PRFields, ", "))
+	if len(f.SyncLinkedIssueFields) > 0 {
+		c.Printf("  <lightBlue>issue sync</>:   <magenta>%s</>\n", strings.Join(f.SyncLinkedIssueFields, ", "))
+	} else {
+		c.Printf("  <lightBlue>issue sync</>:   <gray>disabled</>\n")
+	}
+	if f.ItemLimit > 0 {
+		c.Printf("  <lightBlue>item limit</>:   <yellow>%d</>\n", f.ItemLimit)
+	}
+	if f.DryRun {
+		c.Printf("  <lightBlue>dry run</>:      <yellow>yes</>\n")
+	}
+	fmt.Println()
+
 	// for each repo, get all prs, and add to project
 	for _, repo := range f.Repos {
 		r, err := gh.NewRepo(repo, f.Token)
@@ -138,7 +178,6 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					}
 				}
 
-
 			}
 
 			byStatus[statusText] = append(byStatus[statusText], pr.Number)
@@ -187,67 +226,90 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			}
 
 			// Sync fields from linked issues if configured
-			if len(f.SyncLinkedIssueFields) > 0 && len(pr.ClosingIssueNodeIDs) > 0 {
-				c.Printf("  checking %d linked issue(s) for field sync.. ", len(pr.ClosingIssueNodeIDs))
-
-				// Find which linked issues are in the project using efficient HasItem checks
-				var foundIssueNodeIDs []string
-				for _, issueNodeID := range pr.ClosingIssueNodeIDs {
-					itemID, lookupErr := p.HasItem(issueNodeID)
-					if lookupErr != nil {
-						c.Printf("\n    <red>ERROR!!</> looking up linked issue: %s\n", lookupErr)
-						continue
-					}
-					if itemID != nil {
-						foundIssueNodeIDs = append(foundIssueNodeIDs, issueNodeID)
-					}
-				}
-
-				if len(foundIssueNodeIDs) == 0 {
-					c.Printf("<gray>no linked issues found in project</>")
-				} else if len(foundIssueNodeIDs) > 1 {
-					c.Printf("<yellow>WARNING:</> multiple linked issues found in project (%d), skipping field sync", len(foundIssueNodeIDs))
+			if len(f.SyncLinkedIssueFields) > 0 {
+				if len(pr.ClosingIssues) == 0 {
+					c.Printf("  <gray>🔗 linked issue sync: no closing issues referenced</>")
 				} else {
-					// Exactly one linked issue found — fetch its field values
-					issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(foundIssueNodeIDs[0], f.SyncLinkedIssueFields)
-					if lookupErr != nil {
-						c.Printf("<red>ERROR!!</> reading linked issue fields: %s", lookupErr)
-					} else if len(issueFieldValues) > 0 {
-						var linkedFields []gh.ProjectItemField
-						for _, fieldName := range f.SyncLinkedIssueFields {
-							fv, ok := issueFieldValues[fieldName]
-							if !ok {
-								continue
-							}
-
-							fieldID, hasField := p.FieldIDs[fieldName]
-							if !hasField {
-								c.Printf("\n    <yellow>WARNING:</> field %q not found in project, skipping", fieldName)
-								continue
-							}
-
-							linkedFields = append(linkedFields, gh.ProjectItemField{
-								Name:    "linked_" + strings.ToLower(strings.NewReplacer(" ", "_", "#", "").Replace(fieldName)),
-								FieldID: fieldID,
-								Type:    fv.Type,
-								Value:   fv.Value,
-							})
+					c.Printf("  <magenta>🔗</> linked issue sync (<cyan>%s</>)\n", strings.Join(f.SyncLinkedIssueFields, ", "))
+					c.Printf("    closing issue(s): ")
+					for i, ci := range pr.ClosingIssues {
+						if i > 0 {
+							c.Printf(", ")
 						}
+						c.Printf("<lightCyan>#%d</>", ci.Number)
+					}
+					c.Printf("\n")
 
-						if len(linkedFields) > 0 {
-							if !f.DryRun && iid != nil {
+					// Find which linked issues are in the project
+					type foundIssue struct {
+						NodeID string
+						Number int
+						ItemID string
+					}
+					var inProject []foundIssue
+					for _, ci := range pr.ClosingIssues {
+						c.Printf("    checking <lightCyan>#%d</> (<gray>%s</>).. ", ci.Number, ci.NodeID)
+						itemID, lookupErr := p.HasItem(ci.NodeID)
+						if lookupErr != nil {
+							c.Printf("<red>ERROR!</> %s\n", lookupErr)
+							continue
+						}
+						if itemID != nil {
+							c.Printf("<green>✓ in project</> (<gray>%s</>)\n", *itemID)
+							inProject = append(inProject, foundIssue{NodeID: ci.NodeID, Number: ci.Number, ItemID: *itemID})
+						} else {
+							c.Printf("<yellow>✗ not in project</>\n")
+						}
+					}
+
+					if len(inProject) == 0 {
+						c.Printf("    <yellow>⚠ no linked issues found in project, skipping field sync</>")
+					} else if len(inProject) > 1 {
+						c.Printf("    <yellow>⚠ multiple linked issues in project (%d), skipping field sync</>", len(inProject))
+					} else {
+						// Exactly one linked issue found — fetch its field values
+						c.Printf("    reading fields from issue <lightCyan>#%d</>...\n", inProject[0].Number)
+						issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(inProject[0].NodeID, f.SyncLinkedIssueFields)
+						if lookupErr != nil {
+							c.Printf("    <red>ERROR!</> reading linked issue fields: %s", lookupErr)
+						} else {
+							var linkedFields []gh.ProjectItemField
+							for _, fieldName := range f.SyncLinkedIssueFields {
+								fv, ok := issueFieldValues[fieldName]
+								if !ok {
+									c.Printf("      <gray>%s: <empty></>\n", fieldName)
+									continue
+								}
+
+								fieldID, hasField := p.FieldIDs[fieldName]
+								if !hasField {
+									c.Printf("      <yellow>%s: field not found in project, skipping</>\n", fieldName)
+									continue
+								}
+
+								c.Printf("      <green>%s</>: <white>%v</> (<gray>%s</>)\n", fieldName, fv.Value, fv.Type)
+								linkedFields = append(linkedFields, gh.ProjectItemField{
+									Name:    "linked_" + strings.ToLower(strings.NewReplacer(" ", "_", "#", "").Replace(fieldName)),
+									FieldID: fieldID,
+									Type:    fv.Type,
+									Value:   fv.Value,
+								})
+							}
+
+							if len(linkedFields) == 0 {
+								c.Printf("    <yellow>⚠ no field values to sync</>")
+							} else if !f.DryRun && iid != nil {
+								c.Printf("    syncing <lightGreen>%d</> field(s) to PR.. ", len(linkedFields))
 								syncErr := p.UpdateItem(*iid, linkedFields)
 								if syncErr != nil {
-									c.Printf("<red>ERROR!!</> syncing linked issue fields: %s", syncErr)
+									c.Printf("<red>ERROR!</> %s", syncErr)
 								} else {
-									c.Printf("<green>synced %d field(s) from linked issue</>", len(linkedFields))
+									c.Printf("<green>✓ done</>")
 								}
 							} else if f.DryRun {
-								c.Printf("<yellow>[dry-run: would sync %d field(s)]</>", len(linkedFields))
+								c.Printf("    <yellow>[dry-run: would sync %d field(s)]</>", len(linkedFields))
 							}
 						}
-					} else {
-						c.Printf("<gray>linked issue has no values for requested fields</>")
 					}
 				}
 				c.Printf("\n")

@@ -161,8 +161,6 @@ type ProjectItem struct {
 	NodeID      string // actual pr/issue node id
 }
 
-
-
 // todo: allow configure the fields we want to get
 func (p *Project) GetItems() ([]ProjectItem, error) {
 	q := `query=
@@ -269,6 +267,21 @@ const (
 	ItemValueTypeSingleSelect
 	ItemValueTypeDate
 )
+
+func (t ItemValueType) String() string {
+	switch t {
+	case ItemValueTypeText:
+		return "text"
+	case ItemValueTypeNumber:
+		return "number"
+	case ItemValueTypeSingleSelect:
+		return "select"
+	case ItemValueTypeDate:
+		return "date"
+	default:
+		return "unknown"
+	}
+}
 
 // ProjectItemField represents a single field update for the project item.
 // Type should be either "text" or "number".
