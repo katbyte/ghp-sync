@@ -103,7 +103,6 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 		for _, pr := range *prs {
 			prNode := pr.NodeID
 
-			// flat := strings.Replace(strings.Replace(q, "\n", " ", -1), "\t", "", -1)
 			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.Number, prNode)
 
 			var iid *string
@@ -154,9 +153,9 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 				// calculate days waiting
 				daysWaiting = daysOpen
 
-				events, err := r.GetAllIssueEvents(pr.Number)
-				if err != nil {
-					return fmt.Errorf("getting events for PR %d: %w", pr.Number, err)
+				events, eventsErr := r.GetAllIssueEvents(pr.Number)
+				if eventsErr != nil {
+					return fmt.Errorf("getting events for PR %d: %w", pr.Number, eventsErr)
 				}
 				c.Printf(" with <magenta>%d</> events\n", len(*events))
 
@@ -177,7 +176,6 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 						}
 					}
 				}
-
 			}
 
 			byStatus[statusText] = append(byStatus[statusText], pr.Number)
@@ -262,11 +260,12 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 						}
 					}
 
-					if len(inProject) == 0 {
+					switch {
+					case len(inProject) == 0:
 						c.Printf("    <yellow>⚠ no linked issues found in project, skipping field sync</>")
-					} else if len(inProject) > 1 {
+					case len(inProject) > 1:
 						c.Printf("    <yellow>⚠ multiple linked issues in project (%d), skipping field sync</>", len(inProject))
-					} else {
+					default:
 						// Exactly one linked issue found — fetch its field values
 						c.Printf("    reading fields from issue <lightCyan>#%d</>...\n", inProject[0].Number)
 						issueFieldValues, lookupErr := p.GetItemFieldValuesByNodeID(inProject[0].NodeID, f.SyncLinkedIssueFields)
@@ -296,9 +295,10 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 								})
 							}
 
-							if len(linkedFields) == 0 {
+							switch {
+							case len(linkedFields) == 0:
 								c.Printf("    <yellow>⚠ no field values to sync</>")
-							} else if !f.DryRun && iid != nil {
+							case !f.DryRun && iid != nil:
 								c.Printf("    syncing <lightGreen>%d</> field(s) to PR.. ", len(linkedFields))
 								syncErr := p.UpdateItem(*iid, linkedFields)
 								if syncErr != nil {
@@ -306,7 +306,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 								} else {
 									c.Printf("<green>✓ done</>")
 								}
-							} else if f.DryRun {
+							case f.DryRun:
 								c.Printf("    <yellow>[dry-run: would sync %d field(s)]</>", len(linkedFields))
 							}
 						}

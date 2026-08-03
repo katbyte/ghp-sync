@@ -1,6 +1,6 @@
 module github.com/katbyte/ghp-sync
 
-go 1.23
+go 1.25.3
 
 require (
 	github.com/google/go-github/v45 v45.2.0

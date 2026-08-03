@@ -80,30 +80,29 @@ func CmdSync(_ *cobra.Command, args []string) error {
 		}
 
 		nodeID := *pr.NodeID
-		var dstItemId string
+		var dstItemID string
 		c.Printf("<blue>%s</>/<lightBlue>%s</>#<lightCyan>%d</> \n", owner, name, pr.GetNumber())
 		if di, ok := dstItemNodeIDMap[nodeID]; ok {
 			c.Printf("  already exists, ")
-			dstItemId = di.ID
+			dstItemID = di.ID
 		} else {
 			c.Printf("  <green>adding</> ")
 
-			iid, err := destination.AddItem(nodeID)
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s", err)
+			iid, addErr := destination.AddItem(nodeID)
+			if addErr != nil {
+				c.Printf("\n\n <red>ERROR!!</> %s", addErr)
 				continue
 			}
 			c.Printf("(<magenta>%s</>), setting status.. ", *iid)
-			dstItemId = *iid
+			dstItemID = *iid
 
-			err = destination.SetItemStatus(dstItemId, "Backlog [PRs]")
-			if err != nil {
-				c.Printf("\n\n <red>ERROR!!</> %s", err)
+			if statusErr := destination.SetItemStatus(dstItemID, "Backlog [PRs]"); statusErr != nil {
+				c.Printf("\n\n <red>ERROR!!</> %s", statusErr)
 				continue
 			}
 		}
 
-		if dstItemId == "" {
+		if dstItemID == "" {
 			c.Printf("\n\n <red>ERROR!!</> no item ID found for %s, skipping\n", srcItem.NodeID)
 			continue
 		}
@@ -118,7 +117,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 			{Name: "duedate", FieldID: destination.FieldIDs["Due Date"], Type: gh.ItemValueTypeDate, Value: srcItem.DueDate},
 		}
 
-		err = destination.UpdateItem(dstItemId, fields)
+		err = destination.UpdateItem(dstItemID, fields)
 		if err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			continue

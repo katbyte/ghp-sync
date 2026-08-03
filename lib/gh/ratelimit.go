@@ -15,7 +15,7 @@ type Rate struct {
 	Reset     int `json:"reset"` // epoch seconds
 }
 
-// Flat, no "resources" nesting
+// RateLimits is the flat set of rate limit buckets, without the "resources" nesting of the API response.
 type RateLimits struct {
 	Core                      Rate
 	GraphQL                   Rate
@@ -34,7 +34,7 @@ type RateLimits struct {
 }
 
 func GetRateLimit(ctx context.Context, token string) (*RateLimits, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/rate_limit", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/rate_limit", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func GetRateLimit(ctx context.Context, token string) (*RateLimits, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close() // nolint:errcheck
+	defer resp.Body.Close() //nolint:errcheck // best-effort close of the response body
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

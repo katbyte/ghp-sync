@@ -8,7 +8,7 @@ import (
 )
 
 // ParseGitHubURL parses a GitHub PR/Issue URL and returns the owner, repo name, type, and number.
-func ParseGitHubURL(gitHubURL string) (owner string, name string, typ string, number int, err error) {
+func ParseGitHubURL(gitHubURL string) (owner, name, typ string, number int, err error) {
 	parsedURL, err := url.Parse(gitHubURL)
 	if err != nil {
 		return "", "", "", 0, fmt.Errorf("invalid URL: %w", err)

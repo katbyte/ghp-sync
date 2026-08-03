@@ -106,8 +106,8 @@ func configureFlags(root *cobra.Command) error {
 	return nil
 }
 
-// viper does not correctly handle string slices from env vars the same way it does commandline flags
-// see https://github.com/spf13/viper/issues/380?utm_source=chatgpt.com
+// GetStringSliceFixed works around viper not correctly handling string slices from env vars the
+// same way it does commandline flags, see https://github.com/spf13/viper/issues/380
 func GetStringSliceFixed(key string) []string {
 	s := viper.GetStringSlice(key)
 

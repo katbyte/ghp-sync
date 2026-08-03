@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -109,7 +110,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 					Name:    "issue_number",
 					FieldID: p.FieldIDs["Issue#"],
 					Type:    gh.ItemValueTypeText,
-					Value:   fmt.Sprintf("%d", *issue.Number),
+					Value:   strconv.Itoa(*issue.Number),
 				},
 				{
 					Name:    "user",

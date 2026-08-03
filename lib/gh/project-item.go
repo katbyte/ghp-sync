@@ -100,7 +100,7 @@ func (p *Project) AddItem(nodeID string) (*string, error) {
 	return p.GraphQLQuery(q, fields)
 }
 
-func (p *Project) SetItemStatus(itemId, status string) error {
+func (p *Project) SetItemStatus(itemID, status string) error {
 	// should this be a method of ProjectItem? (to do this we'll need to figure out how to get all the fields and values
 
 	if p.ProjectDetails == nil {
@@ -111,10 +111,11 @@ func (p *Project) SetItemStatus(itemId, status string) error {
 		{Name: "number", FieldID: p.FieldIDs["Status"], Type: ItemValueTypeSingleSelect, Value: status},
 	}
 
-	return p.UpdateItem(itemId, fields)
+	return p.UpdateItem(itemID, fields)
 }
 
-// for not we hard code the project fields we want (dueDate and type)
+// ProjectItemsResult is the result of the project items query; for now we hard code the project
+// fields we want (dueDate and type).
 // TODO in the future we can make this configurable / get all of them
 type ProjectItemsResult struct {
 	Data struct {
@@ -161,6 +162,7 @@ type ProjectItem struct {
 	NodeID      string // actual pr/issue node id
 }
 
+// GetItems returns all items in the project.
 // todo: allow configure the fields we want to get
 func (p *Project) GetItems() ([]ProjectItem, error) {
 	q := `query=
@@ -258,7 +260,7 @@ func (p *Project) GetItems() ([]ProjectItem, error) {
 	return allItems, nil
 }
 
-// create a project item field type NUMBER STRING
+// ItemValueType is the type of a project item field value (text, number, single select, or date).
 type ItemValueType int
 
 const (
@@ -289,7 +291,7 @@ type ProjectItemField struct {
 	Name    string // A short name for this field (used in GraphQL alias, e.g. "set_key")
 	FieldID string // The GraphQL ID of the field
 	Type    ItemValueType
-	Value   interface{}
+	Value   any
 }
 
 // UpdateItem updates the fields of a project item by building a dynamic GraphQL mutation.
@@ -320,9 +322,7 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 		// Variable definitions based on Type
 		varDefs = append(varDefs, fieldIDVar+":ID!")
 		switch f.Type {
-		case ItemValueTypeText:
-			fallthrough
-		case ItemValueTypeSingleSelect:
+		case ItemValueTypeText, ItemValueTypeSingleSelect:
 			varDefs = append(varDefs, fieldValueVar+":String!")
 		case ItemValueTypeNumber:
 			varDefs = append(varDefs, fieldValueVar+":Float!")
@@ -335,11 +335,7 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 		// Add parameters for this field
 		params = append(params, []string{"-f", fmt.Sprintf("%s_field=%s", fieldAlias, f.FieldID)})
 		switch f.Type {
-		case ItemValueTypeText:
-			fallthrough
-		case ItemValueTypeDate:
-			fallthrough
-		case ItemValueTypeSingleSelect:
+		case ItemValueTypeText, ItemValueTypeDate, ItemValueTypeSingleSelect:
 			params = append(params, []string{"-f", fmt.Sprintf("%s_value=%v", fieldAlias, f.Value)})
 		case ItemValueTypeNumber:
 			// Use -F so the value is recognized as a JSON number
@@ -392,7 +388,7 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 // ProjectItemFieldValue holds a field value read from a project item.
 type ProjectItemFieldValue struct {
 	Type  ItemValueType
-	Value interface{} // string for text/date/singleSelect option ID, float64 for number
+	Value any // string for text/date/singleSelect option ID, float64 for number
 }
 
 // GetItemFieldValuesByNodeID looks up the project item for a given content node ID (e.g. an issue)
@@ -404,13 +400,13 @@ func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []
 	}
 
 	// Build dynamic fieldValueByName queries for each requested field
-	fieldFragments := ""
+	var fieldFragments strings.Builder
 	for i, name := range fieldNames {
 		alias := fmt.Sprintf("f%d", i)
 		// Escape quotes and backslashes to prevent GraphQL injection
 		safeName := strings.ReplaceAll(name, `\`, `\\`)
 		safeName = strings.ReplaceAll(safeName, `"`, `\"`)
-		fieldFragments += fmt.Sprintf(`
+		fmt.Fprintf(&fieldFragments, `
 						%s:fieldValueByName(name:"%s") {
 							... on ProjectV2ItemFieldTextValue {
 								__typename
@@ -456,7 +452,7 @@ func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []
 				}
 			}
 		}
-	`, fieldFragments)
+	`, fieldFragments.String())
 
 	params := [][]string{
 		{"-f", "org=" + p.Owner},
@@ -498,8 +494,8 @@ func (p *Project) GetItemFieldValuesByNodeID(contentNodeID string, fieldNames []
 
 	var cursor string
 	for {
-		queryParams := make([][]string, len(params))
-		copy(queryParams, params)
+		queryParams := make([][]string, 0, len(params)+1)
+		queryParams = append(queryParams, params...)
 		if cursor != "" {
 			queryParams = append(queryParams, []string{"-f", "cursor=" + cursor})
 		}

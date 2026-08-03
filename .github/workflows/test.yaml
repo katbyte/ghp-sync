@@ -1,5 +1,5 @@
 ---
-name: vendor dependencies check
+name: test
 on:
   push:
     branches: [ 'main' ]
@@ -12,11 +12,11 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  depscheck:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: ./.go-version
-      - run: make depscheck
+      - run: make test

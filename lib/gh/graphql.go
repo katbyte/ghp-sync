@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-func (t Token) GraphQLQueryUnmarshal(query string, params [][]string, data interface{}) error {
+func (t Token) GraphQLQueryUnmarshal(query string, params [][]string, data any) error {
 	out, err := t.GraphQLQuery(query, params)
 	if err != nil {
 		return err
@@ -29,12 +30,11 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 	args = append(args, "api", "graphql", "-f", query)
 
 	for _, p := range params {
-		args = append(args, p[0])
-		args = append(args, p[1])
+		args = append(args, p[0], p[1])
 	}
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		ghc := exec.Command("gh", args...) //nolint:gosec // args are constructed internally
+		ghc := exec.CommandContext(context.Background(), "gh", args...) //nolint:gosec // args are constructed internally
 
 		// Preserve existing environment and add GITHUB_TOKEN if present
 		env := os.Environ()
@@ -46,7 +46,7 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 		out, err := ghc.CombinedOutput()
 		outstr := string(out)
 
-		// Success: return immediately
+		// on success return the output immediately
 		if err == nil {
 			return &outstr, nil
 		}

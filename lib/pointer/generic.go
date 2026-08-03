@@ -1,3 +1,4 @@
+// Package pointer provides generic helpers for converting values to and from pointers.
 package pointer
 
 func From[T any](input *T) (output T) {

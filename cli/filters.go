@@ -61,7 +61,6 @@ func GetFilterForLabels(labels []string, and bool) *Filter {
 
 	c.Printf("  labels %s:  <blue>%s</>\n", action, strings.Join(labels, "</>,<blue>"))
 
-	//	found := false
 	return &Filter{
 		Name: "labels " + action,
 		Issue: func(issue github.Issue) (bool, error) {

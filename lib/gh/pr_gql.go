@@ -40,7 +40,7 @@ type pullRequestsQuery struct {
 	Repository struct {
 		PullRequests struct {
 			Nodes []struct {
-				Id                 string
+				ID                 string
 				Number             int
 				Title              string
 				State              string
@@ -93,7 +93,7 @@ type pullRequestsQuery struct {
 
 				ClosingIssuesReferences struct {
 					Nodes []struct {
-						Id     string
+						ID     string
 						Number int
 					}
 				} `graphql:"closingIssuesReferences(first: 10)"`
@@ -107,7 +107,7 @@ type pullRequestsQuery struct {
 	} `graphql:"repository(owner: $owner, name: $repository)"`
 }
 
-func (r Repo) GetAllPullRequestsGQL(states []string, reviewers []string, limit int, progress func(int)) (*[]PullRequest, error) {
+func (r Repo) GetAllPullRequestsGQL(states, reviewers []string, limit int, progress func(int)) (*[]PullRequest, error) {
 	client, ctx, err := r.NewGraphQLClient()
 	if err != nil {
 		return nil, fmt.Errorf("instantiating GraphQL client: %w", err)
@@ -160,7 +160,7 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 
 	for _, pullRequest := range q.Repository.PullRequests.Nodes {
 		pr := PullRequest{
-			NodeID:                   pullRequest.Id,
+			NodeID:                   pullRequest.ID,
 			Author:                   pullRequest.Author.Login,
 			Number:                   pullRequest.Number,
 			Title:                    pullRequest.Title,
@@ -186,7 +186,7 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 
 		for _, issue := range pullRequest.ClosingIssuesReferences.Nodes {
 			pr.ClosingIssues = append(pr.ClosingIssues, ClosingIssue{
-				NodeID: issue.Id,
+				NodeID: issue.ID,
 				Number: issue.Number,
 			})
 		}

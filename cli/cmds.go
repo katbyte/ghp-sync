@@ -1,10 +1,11 @@
+// Package cli implements the ghp-sync command line interface.
 package cli
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/katbyte/ghp-sync/version"
+	"github.com/katbyte/ghp-sync/lib/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -41,7 +42,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(cmdName + " v" + version.Version + "-" + version.GitCommit)
+			fmt.Println(cmdName + " " + version.Version)
 		},
 	})
 

@@ -1,3 +1,4 @@
+// Package chttp provides an http.Client wrapper that trace-logs requests and responses.
 package chttp
 
 import (

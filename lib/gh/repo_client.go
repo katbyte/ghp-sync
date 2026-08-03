@@ -1,3 +1,4 @@
+// Package gh wraps the GitHub REST and GraphQL APIs for syncing issues, PRs, and project items.
 package gh
 
 import (
@@ -24,9 +25,9 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 
 	// github is.. special using 403 instead of 429 for rate limiting so we need to handle that here :(
 	retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
-		if resp != nil && resp.StatusCode == 403 {
+		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			// get x-rate-limit-reset header
-			reset := resp.Header.Get("x-ratelimit-reset")
+			reset := resp.Header.Get("X-Ratelimit-Reset")
 			if reset != "" {
 				i, err := strconv.ParseInt(reset, 10, 64)
 				if err == nil {
@@ -45,7 +46,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 		if err != nil {
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 		}
-		if resp != nil && resp.StatusCode == 403 {
+		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			return true, nil
 		}
 
@@ -65,6 +66,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	return github.NewClient(httpClient), ctx
 }
 
+// NewGraphQLClient returns a githubv4 client with rate limit aware retries.
 // todo we may want to update the above retry logic to match this one
 func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 	ctx := context.Background()
@@ -91,8 +93,8 @@ func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 				}
 			}
 			// GitHub primary limit: X-RateLimit-Reset (unix seconds)
-			if resp.StatusCode == 403 || resp.StatusCode == 429 {
-				if reset := resp.Header.Get("X-RateLimit-Reset"); reset != "" {
+			if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+				if reset := resp.Header.Get("X-Ratelimit-Reset"); reset != "" {
 					if i, err := strconv.ParseInt(reset, 10, 64); err == nil {
 						utime := time.Unix(i, 0)
 						wait := time.Until(utime) + time.Minute // pad a minute to be safe
@@ -121,14 +123,14 @@ func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 		}
 
 		// Standard: retry 5xx and 429
-		if resp.StatusCode == 0 || resp.StatusCode >= 500 || resp.StatusCode == 429 {
+		if resp.StatusCode == 0 || resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
 			return true, nil
 		}
 
 		// GitHub quirk: secondary/abuse rate limits return 403
-		if resp.StatusCode == 403 {
+		if resp.StatusCode == http.StatusForbidden {
 			// If remaining is 0, or Retry-After present, or we just decide to be safe—retry.
-			if resp.Header.Get("X-RateLimit-Remaining") == "0" ||
+			if resp.Header.Get("X-Ratelimit-Remaining") == "0" ||
 				resp.Header.Get("Retry-After") != "" {
 				return true, nil
 			}

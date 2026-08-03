@@ -1,3 +1,4 @@
+// Package clog provides the shared logrus logger, configured via the GHP_SYNC_LOG environment variable.
 package clog
 
 import (

@@ -1,47 +1,55 @@
 GIT_COMMIT=$(shell git describe --always --long --dirty)
-GOLANGCI_LINT_VERSION?=v1.47.3
+GIT_VERSION=$(shell (git describe --tags --dirty 2>/dev/null || echo dev) | sed 's/-\([0-9]*\)-g/+\1@g/')
+GOLANGCI_LINT_VERSION?=v2.12.2
 TEST_TIMEOUT?=15m
 
 default: fmt build
 
-all: fmt imports build
+all: fmt build
 
-tools:
-	@echo "==> installing required tooling..."
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH || $$GOPATH)/bin v1.64.6
+help: ## Show this help
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-24s\033[0m%s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
 
-fmt:
-	@echo "==> Fixing source code with gofmt..."
-	find . -name '*.go' | grep -v vendor | xargs gofmt -s -w
-
-fumpt:
-	@echo "==> Fixing source code with Gofumpt..."
-	# This logic should match the search logic in scripts/gofmtcheck.sh
-	find . -name '*.go' | grep -v vendor | xargs gofumpt -s -w
-
-imports:
-	@echo "==> Fixing imports code with goimports..."
-	goimports -w .
-
-test: build
-	go test ./... -timeout ${TEST_TIMEOUT}
-
-build:
+##@ Build
+build: ## Compile ghp-sync with version info from git
 	@echo "==> building..."
-	go build -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT}"
+	go build -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/ghp-sync/lib/version.Version=${GIT_VERSION}"
 
-docker:
+install: ## Install ghp-sync into GOPATH/bin with version info from git
+	@echo "==> installing..."
+	go install -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/ghp-sync/lib/version.Version=${GIT_VERSION}" .
+
+docker: ## Build the ghp-sync docker image
 	docker build --network=host --tag ghp-sync .
 
-goimports:
-	@echo "==> Fixing imports code with goimports..."
-	@find . -name '*.go' | grep -v vendor | grep -v generator-resource-id | while read f; do ./scripts/goimport-file.sh "$$f"; done
+tools: ## Install the tools required for development (golangci-lint)
+	@echo "==> installing required tooling..."
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(shell go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
 
-lint:
+##@ Formatting
+fmt: ## Fix Go formatting (gofmt, gofumpt, goimports)
+	@echo "==> Fixing source code with gofmt..."
+	find . -name '*.go' | grep -v vendor | xargs gofmt -s -w
+	@echo "==> Fixing source code with gofumpt..."
+	find . -name '*.go' | grep -v vendor | xargs gofumpt -w
+	@echo "==> Fixing imports with golangci-lint (goimports)..."
+	golangci-lint fmt -E goimports ./...
+
+goimports: ## Fix imports with golangci-lint (goimports)
+	@echo "==> Fixing imports with golangci-lint (goimports)..."
+	golangci-lint fmt -E goimports ./...
+
+##@ Linting & Dependencies
+lint: ## Check source code with the golangci linters
 	@echo "==> Checking source code against linters..."
 	golangci-lint run ./...
 
-depscheck:
+lint-fix: ## Fix source code with all golangci linters
+	@echo "==> Checking source code against linters (applying autofixes)..."
+	golangci-lint run --fix ./...
+
+depscheck: ## Check that go.mod/go.sum and vendor/ are in sync
 	@echo "==> Checking source code with go mod tidy..."
 	@go mod tidy
 	@git diff --exit-code -- go.mod go.sum || \
@@ -51,10 +59,10 @@ depscheck:
 	@git diff --compact-summary --exit-code -- vendor || \
 		(echo; echo "Unexpected difference in vendor/ directory. Run 'go mod vendor' command or revert any go.mod/go.sum/vendor changes and commit."; exit 1)
 
-install:
-	@echo "==> installing..."
-	go install -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT}" .
+##@ Testing
+test: build ## Run the unit tests (with -race)
+	go test -race ./... -timeout ${TEST_TIMEOUT}
 
-check-all: build test lint depscheck
+check-all: build test lint depscheck ## Run build + test + lint + depscheck
 
-.PHONY: fmt imports build lint depscheck check-all install tools
+.PHONY: default all help fmt goimports build docker lint lint-fix depscheck check-all install tools test
