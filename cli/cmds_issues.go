@@ -90,7 +90,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 			}
 
 			totalIssues++
-			daysSinceCreation = int(time.Since(issue.GetCreatedAt()) / (time.Hour * 24))
+			daysSinceCreation = int(time.Since(issue.GetCreatedAt().Time) / (time.Hour * 24))
 			collectiveDaysSinceCreation += daysSinceCreation
 
 			// statuses and waiting days code removed

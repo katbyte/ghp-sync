@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v89/github"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/katbyte/ghp-sync/lib/clog"
 	"github.com/shurcooL/githubv4"
@@ -63,7 +63,13 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	// Wrap via StandardClient so the retryable transport stays in the chain
 	httpClient := retryClient.StandardClient()
 
-	return github.NewClient(httpClient), ctx
+	client, err := github.NewClient(github.WithHTTPClient(httpClient))
+	if err != nil {
+		// only possible with invalid options such as a nil http client
+		clog.Log.Fatalf("failed to create github client: %s", err)
+	}
+
+	return client, ctx
 }
 
 // NewGraphQLClient returns a githubv4 client with rate limit aware retries.

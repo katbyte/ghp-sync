@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v89/github"
 	"github.com/katbyte/ghp-sync/lib/clog"
 )
 
@@ -72,7 +72,7 @@ func (r Repo) GetAllIssueEvents(number int) (*[]github.Timeline, error) {
 			dateB = allEvents[b].SubmittedAt
 		}
 
-		return dateA.After(*dateB)
+		return dateA.After(dateB.Time)
 	})
 
 	return &allEvents, nil

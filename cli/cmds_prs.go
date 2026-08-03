@@ -163,7 +163,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					// check for waiting response label removed
 					if t.GetEvent() == "unlabeled" {
 						if t.Label.GetName() == "waiting-response" {
-							daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
+							daysWaiting = int(time.Since(t.GetCreatedAt().Time) / (time.Hour * 24))
 							break
 						}
 					}
@@ -171,7 +171,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 					// check for blocked milestone removal
 					if t.GetEvent() == "demilestoned" {
 						if t.Milestone.GetTitle() == "Blocked" {
-							daysWaiting = int(time.Since(t.GetCreatedAt()) / (time.Hour * 24))
+							daysWaiting = int(time.Since(t.GetCreatedAt().Time) / (time.Hour * 24))
 							break
 						}
 					}

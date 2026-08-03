@@ -3,7 +3,7 @@ module github.com/katbyte/ghp-sync
 go 1.25.3
 
 require (
-	github.com/google/go-github/v45 v45.2.0
+	github.com/google/go-github/v89 v89.0.0
 	github.com/gookit/color v1.6.1
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
@@ -16,7 +16,7 @@ require (
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
@@ -29,7 +29,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 )

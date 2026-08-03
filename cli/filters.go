@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v89/github"
 	c "github.com/gookit/color"
 )
 

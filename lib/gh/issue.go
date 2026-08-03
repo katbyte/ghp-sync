@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v89/github"
 	"github.com/katbyte/ghp-sync/lib/clog"
 )
 
@@ -19,20 +19,20 @@ func (r Repo) ListAllIssues(state string, cb func([]*github.Issue, *github.Respo
 	}
 
 	for {
-		clog.Log.Debugf("Listing all Issues for %s/%s (Page %d)...", r.Owner, r.Name, opts.Page)
+		clog.Log.Debugf("Listing all Issues for %s/%s (Page %d)...", r.Owner, r.Name, opts.ListOptions.Page)
 		issues, resp, err := client.Issues.ListByRepo(ctx, r.Owner, r.Name, opts)
 		if err != nil {
-			return fmt.Errorf("unable to list Issues for %s/%s (Page %d): %w", r.Owner, r.Name, opts.Page, err)
+			return fmt.Errorf("unable to list Issues for %s/%s (Page %d): %w", r.Owner, r.Name, opts.ListOptions.Page, err)
 		}
 
 		if err = cb(issues, resp); err != nil {
-			return fmt.Errorf("callback failed for %s/%s (Page %d): %w", r.Owner, r.Name, opts.Page, err)
+			return fmt.Errorf("callback failed for %s/%s (Page %d): %w", r.Owner, r.Name, opts.ListOptions.Page, err)
 		}
 
 		if resp.NextPage == 0 {
 			break
 		}
-		opts.Page = resp.NextPage
+		opts.ListOptions.Page = resp.NextPage
 	}
 
 	return nil
