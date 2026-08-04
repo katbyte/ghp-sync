@@ -64,6 +64,25 @@ func Make(cmdName string) (*cobra.Command, error) {
 		RunE:          CmdPRs,
 	})
 
+	addCmd := &cobra.Command{
+		Use:   "add [field[:type] ...]",
+		Short: "Add PRs/issues to a project from CSV on stdin (url,col1,col2,...), mapping each column to the named project field",
+		Long: `Add PRs/issues to a project from CSV on stdin, where the first column is a github PR/issue URL
+and the remaining columns map to project fields. With no args the first line is a header naming
+the field for each column (the url column's header is ignored); positional args name the fields
+instead for headerless input. Use '-' to skip a column, and an optional ':text', ':number',
+':date' suffix to force a field type (single select fields are detected automatically and
+mapped by option name).
+
+  rjg list | ghp-sync add -o katbyte -p 42 --set "Status=Backlog [PRs]"
+  rjg list | ghp-sync add "JIRA" "JIRA URL" -o katbyte -p 42   # headerless input`,
+		SilenceErrors: true,
+		PreRunE:       ValidateParams([]string{"token", "project-owner", "project-number"}),
+		RunE:          CmdAdd,
+	}
+	addCmd.Flags().StringSlice("set", []string{}, "set a fixed field value on every added item, e.g. 'Status=Backlog [PRs]' (repeatable)")
+	root.AddCommand(addCmd)
+
 	root.AddCommand(&cobra.Command{
 		Use:           "project source-project-owner source-project-number",
 		Short:         "Sync issues and PRs between two projects",

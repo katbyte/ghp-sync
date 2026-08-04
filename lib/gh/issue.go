@@ -38,6 +38,17 @@ func (r Repo) ListAllIssues(state string, cb func([]*github.Issue, *github.Respo
 	return nil
 }
 
+func (r Repo) GetIssue(number int) (*github.Issue, error) {
+	client, ctx := r.NewClient()
+
+	i, _, err := client.Issues.Get(ctx, r.Owner, r.Name, number)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get issue %d for %s/%s: %w", number, r.Owner, r.Name, err)
+	}
+
+	return i, nil
+}
+
 func (r Repo) GetAllIssues(state string) (*[]github.Issue, error) {
 	var allIssues []github.Issue
 

@@ -100,10 +100,10 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 
 		byStatus := map[string][]int{}
 
-		for _, pr := range *prs {
+		for i, pr := range *prs {
 			prNode := pr.NodeID
 
-			c.Printf("Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", pr.Number, prNode)
+			c.Printf("<white>%d</><gray>/%d</> Syncing pr <lightCyan>%d</> (<cyan>%s</>) to project.. ", i+1, len(*prs), pr.Number, prNode)
 
 			var iid *string
 			if !f.DryRun {
