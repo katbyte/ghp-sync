@@ -10,5 +10,5 @@ func From[T any](input *T) (output T) {
 }
 
 func To[T any](input T) *T {
-	return &input
+	return new(input)
 }

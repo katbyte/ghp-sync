@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/katbyte/ghp-sync/lib/clog"
+	"github.com/katbyte/go-kt/clog"
 	"github.com/shurcooL/githubv4"
 )
 

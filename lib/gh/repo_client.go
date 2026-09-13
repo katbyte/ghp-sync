@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/go-github/v89/github"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/katbyte/ghp-sync/lib/clog"
+	"github.com/katbyte/go-kt/clog"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )

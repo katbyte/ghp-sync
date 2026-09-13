@@ -13,11 +13,11 @@ help: ## Show this help
 ##@ Build
 build: ## Compile ghp-sync with version info from git
 	@echo "==> building..."
-	go build -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/ghp-sync/lib/version.Version=${GIT_VERSION}"
+	go build -ldflags "-X github.com/katbyte/go-kt/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/go-kt/version.Version=${GIT_VERSION}"
 
 install: ## Install ghp-sync into GOPATH/bin with version info from git
 	@echo "==> installing..."
-	go install -ldflags "-X github.com/katbyte/ghp-sync/lib/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/ghp-sync/lib/version.Version=${GIT_VERSION}" .
+	go install -ldflags "-X github.com/katbyte/go-kt/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/go-kt/version.Version=${GIT_VERSION}" .
 
 docker: ## Build the ghp-sync docker image
 	docker build --network=host --tag ghp-sync .

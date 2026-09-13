@@ -30,7 +30,7 @@ class GhpSync < Formula
   depends_on "go" => :build
 
   def install
-    system "go", "build", *std_go_args(ldflags: "-s -w -X github.com/katbyte/ghp-sync/lib/version.Version=${TAG} -X github.com/katbyte/ghp-sync/lib/version.GitCommit=homebrew")
+    system "go", "build", *std_go_args(ldflags: "-s -w -X github.com/katbyte/go-kt/version.Version=${TAG} -X github.com/katbyte/go-kt/version.GitCommit=homebrew")
   end
 
   test do

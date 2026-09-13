@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/katbyte/ghp-sync/lib/version"
+	"github.com/katbyte/go-kt/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

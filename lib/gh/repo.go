@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/katbyte/ghp-sync/lib/pointer"
 )
 
 type Token struct {
@@ -25,7 +23,7 @@ func NewRepo(repo, token string) (*Repo, error) {
 		return nil, fmt.Errorf("invalid repo format, expected owner/name got %q", repo)
 	}
 
-	return pointer.To(NewRepoOwnerName(parts[0], parts[1], token)), nil
+	return new(NewRepoOwnerName(parts[0], parts[1], token)), nil
 }
 
 func NewRepoOwnerName(owner, name, token string) Repo {
