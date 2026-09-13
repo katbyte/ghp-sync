@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v89 v89.0.0
 	github.com/gookit/color v1.6.1
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/katbyte/go-kt v0.1.0
+	github.com/katbyte/go-kt v0.2.0
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
