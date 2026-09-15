@@ -3,7 +3,7 @@ version: "3.6"
 services:
   ghp-sync:
     # published on release; `docker compose pull` picks up a new build of this tag
-    image: ghcr.io/katbyte/ghp-sync:0.3.1
+    image: ghcr.io/katbyte/ghp-sync:v0.3.2
     container_name: ghp-sync
     environment:
       - "TZ=America/Vancouver"
