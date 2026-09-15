@@ -122,18 +122,17 @@ func configureFlags(root *cobra.Command) error {
 
 // GetStringSliceFixed works around viper not correctly handling string slices from env vars the
 // same way it does commandline flags, see https://github.com/spf13/viper/issues/380
+// env vars come through as a raw string which viper would split on whitespace, breaking values
+// with spaces like "Approved By", so split those on commas only
 func GetStringSliceFixed(key string) []string {
-	s := viper.GetStringSlice(key)
-
-	if len(s) == 0 || (len(s) == 1 && s[0] == "") {
-		return s // empty
+	if s, ok := viper.Get(key).(string); ok {
+		if s == "" {
+			return []string{}
+		}
+		return strings.Split(s, ",")
 	}
 
-	if len(s) > 1 { // already a slice, return as is
-		return s
-	}
-
-	return strings.Split(s[0], ",")
+	return viper.GetStringSlice(key) // flags are already parsed into a slice
 }
 
 func GetFlags() FlagData {
