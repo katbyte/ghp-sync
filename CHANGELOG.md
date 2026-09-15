@@ -1,3 +1,14 @@
+## v0.3.0 (2026-09-15)
+
+- fix env var lists splitting on spaces, so `GITHUB_PR_POPULATE_FIELDS=PR#,Approved By` works
+- pin dev tools in `.tools/`, built by `make tools`
+- add actionlint, yamllint, shellcheck, and typos checks
+- enable revive and azproviderlint linters
+- pin github actions by commit hash, workflow tokens read-only
+- sign releases with cosign, attach build provenance
+- add `SECURITY.md` and README badges
+- move clog and version to go-kt
+
 ## v0.2.0 (2026-08-27)
 
 - add `--merged-by` and `--merged-since` filters for syncing merged PRs; `--merged-since` walks PRs by update time so it can stop early instead of crawling full repo history
