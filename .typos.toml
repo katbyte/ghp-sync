@@ -23,7 +23,6 @@ extend-ignore-re = [
   # go.mod pseudo-versions (vX.Y.Z-yyyymmddhhmmss-hash, vX.Y.Z-0.yyyymmddhhmmss-hash, vX.Y.Z-pre.0.yyyymmddhhmmss-hash)
   # end in a commit hash typos tries to read
   'v\d+\.\d+\.\d+-(\S+\.)?\d{14}-[0-9a-f]{12}',
-  '[A-Za-z0-9+/=-]{30,}', # base64 blobs, certificates, tokens (no underscore, so long snake_case names are still checked)
 ]
 
 [default.extend-words]
