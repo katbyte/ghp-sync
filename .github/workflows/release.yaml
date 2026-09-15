@@ -65,7 +65,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # v1.2.3 publishes :1.2.3, :1.2 and :latest, so compose can pin a version or track latest
+      # tag v1.2.3 publishes :1.2.3, :1.2 and :latest, plus :v1.2.3 so the image tag can be written
+      # the same way as the git tag
       - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
@@ -73,6 +74,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ github.ref_name }}
             type=raw,value=latest
       - name: read the go version to build with
         id: go
