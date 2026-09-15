@@ -1,5 +1,12 @@
 # ghp-sync
 
+[![GitHub release](https://img.shields.io/github/v/release/katbyte/ghp-sync?color=blueviolet)](https://github.com/katbyte/ghp-sync/releases/latest)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/katbyte/ghp-sync?label=go&color=00ADD8)](https://github.com/katbyte/ghp-sync/blob/main/go.mod)
+[![License](https://img.shields.io/github/license/katbyte/ghp-sync?color=blue)](https://github.com/katbyte/ghp-sync/blob/main/LICENSE)
+![build](https://github.com/katbyte/ghp-sync/actions/workflows/build.yaml/badge.svg)
+![lint](https://github.com/katbyte/ghp-sync/actions/workflows/pr-golangci-lint.yaml/badge.svg)
+![CodeQL](https://github.com/katbyte/ghp-sync/actions/workflows/codeql-analysis.yml/badge.svg)
+
 This is an application for dealing with GitHub Project Boards. This is intended to make sorting through issues and PRs in large repos faster and easier via the GitHub Project Board.
 
 It can automatically add Issues or PRs to Project Boards based on the repo, organization, and project number. 

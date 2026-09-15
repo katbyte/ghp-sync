@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/katbyte/go-kt/pointer"
 )
 
 // HasItem checks whether a given content node (issue or PR) is already in this project.
@@ -423,11 +425,7 @@ func (p *Project) UpdateItem(itemID string, fields []ProjectItemField) error {
 
 	out, err := p.GraphQLQuery(mutation, params)
 	if err != nil {
-		outStr := ""
-		if out != nil {
-			outStr = *out
-		}
-		return fmt.Errorf("error updating project item: %w\noutput: %s\nmutation: %s", err, outStr, mutation)
+		return fmt.Errorf("error updating project item: %w\noutput: %s\nmutation: %s", err, pointer.From(out), mutation)
 	}
 
 	return nil

@@ -11,7 +11,7 @@ import (
 )
 
 func ValidateParams(params []string) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, _ []string) error {
 		for _, p := range params {
 			if viper.GetString(p) == "" {
 				return errors.New(p + " parameter can't be empty")
@@ -29,7 +29,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Long:          `Sync GitHub issues and PRs to a GitHub Project`,
 		SilenceErrors: true,
 		PreRunE:       ValidateParams([]string{"token", "repos", "project-owner", "project-number"}),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			fmt.Println("USAGE: ghp-syc [issues|prs] katbyte/ghp-sync project")
 
 			return nil
@@ -41,7 +41,7 @@ func Make(cmdName string) (*cobra.Command, error) {
 		Short:         "Print the version",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println(cmdName + " " + version.Version)
 		},
 	})

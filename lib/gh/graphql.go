@@ -67,8 +67,7 @@ func (t Token) GraphQLQuery(query string, params [][]string) (*string, error) {
 		}
 
 		// Exponential backoff (1s, 2s, 4s, 8s, ...)
-		delay := baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
-		time.Sleep(delay)
+		time.Sleep(baseDelay * time.Duration(math.Pow(2, float64(attempt-1))))
 	}
 
 	// Should be unreachable, but keeps compiler happy

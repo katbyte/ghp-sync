@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	c "github.com/gookit/color"
@@ -84,7 +84,7 @@ func resolveField(p gh.Project, alias, fieldName, value string, typeOverride *gh
 			for name := range p.SingleSelectOptionIDs[fieldName] {
 				opts = append(opts, name)
 			}
-			sort.Strings(opts)
+			slices.Sort(opts)
 
 			return gh.ProjectItemField{}, fmt.Errorf("field %q has no option %q (options: %s)", fieldName, value, strings.Join(opts, ", "))
 		}
@@ -129,7 +129,7 @@ func CmdAdd(cmd *cobra.Command, args []string) error {
 	for name := range p.FieldIDs {
 		available = append(available, name)
 	}
-	sort.Strings(available)
+	slices.Sort(available)
 	for _, m := range mappings {
 		if m.Skip {
 			continue

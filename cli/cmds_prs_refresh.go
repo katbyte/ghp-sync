@@ -359,14 +359,14 @@ func prFieldValueUnchanged(t gh.ItemValueType, current gh.ProjectItemFieldValue,
 		return false
 	case gh.ItemValueTypeDate:
 		cur := ""
-		if exists {
-			cur, _ = current.Value.(string)
+		if s, ok := current.Value.(string); exists && ok {
+			cur = s
 		}
 		return trimToDay(cur) == trimToDay(fmt.Sprint(value))
 	default: // text and single select option IDs compare as strings; unset counts as empty
 		cur := ""
-		if exists {
-			cur, _ = current.Value.(string)
+		if s, ok := current.Value.(string); exists && ok {
+			cur = s
 		}
 		return cur == fmt.Sprint(value)
 	}

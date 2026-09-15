@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# make instlal
+# make install
 make
 make install
 

@@ -2,7 +2,7 @@ package gh
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/google/go-github/v89/github"
 	"github.com/katbyte/go-kt/clog"
@@ -39,7 +39,7 @@ func (r Repo) ListAllIssueEvents(number int, cb func([]*github.Timeline, *github
 func (r Repo) GetAllIssueEvents(number int) (*[]github.Timeline, error) {
 	var allEvents []github.Timeline
 
-	err := r.ListAllIssueEvents(number, func(events []*github.Timeline, resp *github.Response) error {
+	if err := r.ListAllIssueEvents(number, func(events []*github.Timeline, _ *github.Response) error {
 		for i, e := range events {
 			if e == nil {
 				clog.Log.Debugf("events[%d] was nil, skipping", i)
@@ -55,24 +55,23 @@ func (r Repo) GetAllIssueEvents(number int) (*[]github.Timeline, error) {
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("failed to get all events for %s/%s: %w", r.Owner, r.Name, err)
 	}
 
 	// sort descending (most recent first) so callers can break on the first match
-	sort.Slice(allEvents, func(a, b int) bool {
-		dateA := allEvents[a].CreatedAt
+	slices.SortFunc(allEvents, func(a, b github.Timeline) int {
+		dateA := a.CreatedAt
 		if dateA == nil {
-			dateA = allEvents[a].SubmittedAt
+			dateA = a.SubmittedAt
 		}
 
-		dateB := allEvents[b].CreatedAt
+		dateB := b.CreatedAt
 		if dateB == nil {
-			dateB = allEvents[b].SubmittedAt
+			dateB = b.SubmittedAt
 		}
 
-		return dateA.After(dateB.Time)
+		return dateB.Compare(dateA.Time)
 	})
 
 	return &allEvents, nil

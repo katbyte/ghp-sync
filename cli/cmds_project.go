@@ -22,8 +22,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 	destination := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	err = destination.LoadDetails()
-	if err != nil {
+	if err = destination.LoadDetails(); err != nil {
 		return fmt.Errorf("loading destination project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", destination.ID)
@@ -117,8 +116,7 @@ func CmdSync(_ *cobra.Command, args []string) error {
 			{Name: "duedate", FieldID: destination.FieldIDs["Due Date"], Type: gh.ItemValueTypeDate, Value: srcItem.DueDate},
 		}
 
-		err = destination.UpdateItem(dstItemID, fields)
-		if err != nil {
+		if err = destination.UpdateItem(dstItemID, fields); err != nil {
 			c.Printf("\n\n <red>ERROR!!</> %s\n", err)
 			continue
 		}

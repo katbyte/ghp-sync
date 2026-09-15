@@ -1,3 +1,4 @@
+// Ghp-sync syncs GitHub issues and pull requests to a GitHub Project board.
 package main
 
 import (

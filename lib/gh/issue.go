@@ -1,8 +1,9 @@
 package gh
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/google/go-github/v89/github"
 	"github.com/katbyte/go-kt/clog"
@@ -52,7 +53,7 @@ func (r Repo) GetIssue(number int) (*github.Issue, error) {
 func (r Repo) GetAllIssues(state string) (*[]github.Issue, error) {
 	var allIssues []github.Issue
 
-	err := r.ListAllIssues(state, func(issues []*github.Issue, resp *github.Response) error {
+	if err := r.ListAllIssues(state, func(issues []*github.Issue, _ *github.Response) error {
 		for index, i := range issues {
 			if i == nil {
 				clog.Log.Debugf("issues[%d] was nil, skipping", index)
@@ -72,13 +73,12 @@ func (r Repo) GetAllIssues(state string) (*[]github.Issue, error) {
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("failed to get all issues for %s/%s: %w", r.Owner, r.Name, err)
 	}
 
-	sort.Slice(allIssues, func(i, j int) bool {
-		return allIssues[i].GetNumber() < allIssues[j].GetNumber()
+	slices.SortFunc(allIssues, func(a, b github.Issue) int {
+		return cmp.Compare(a.GetNumber(), b.GetNumber())
 	})
 
 	return &allIssues, nil
