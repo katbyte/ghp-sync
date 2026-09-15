@@ -18,8 +18,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	err := p.LoadDetails()
-	if err != nil {
+	if err := p.LoadDetails(); err != nil {
 		return fmt.Errorf("loading project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", p.ID)
@@ -126,8 +125,7 @@ func CmdIssues(_ *cobra.Command, _ []string) error {
 				},
 			}
 
-			err = p.UpdateItem(*iid, fields)
-			if err != nil {
+			if err = p.UpdateItem(*iid, fields); err != nil {
 				c.Printf("<red>ERROR!!</> %s\n", err)
 				continue
 			}

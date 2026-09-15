@@ -1,8 +1,9 @@
 package cli
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -39,8 +40,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 	p := gh.NewProject(f.ProjectOwner, f.ProjectNumber, f.Token)
 
 	c.Printf("Looking up project details for <green>%s</>/<lightGreen>%d</>...\n", f.ProjectOwner, f.ProjectNumber)
-	err := p.LoadDetails()
-	if err != nil {
+	if err := p.LoadDetails(); err != nil {
 		return fmt.Errorf("loading project details: %w", err)
 	}
 	c.Printf("  ID: <magenta>%s</>\n", p.ID)
@@ -288,8 +288,7 @@ func CmdPRs(_ *cobra.Command, _ []string) error {
 			}
 
 			if !f.DryRun && iid != nil {
-				err = p.UpdateItem(*iid, fields)
-				if err != nil {
+				if err = p.UpdateItem(*iid, fields); err != nil {
 					c.Printf("<red>ERROR!!</> %s\n\n", err)
 					continue
 				}
@@ -462,8 +461,8 @@ func FilterByFlags(f FlagData, prs *[]gh.PullRequest) (matched *[]gh.PullRequest
 		}
 	}
 
-	sort.Slice(filteredPRs, func(i, j int) bool {
-		return filteredPRs[i].Number < filteredPRs[j].Number
+	slices.SortFunc(filteredPRs, func(a, b gh.PullRequest) int {
+		return cmp.Compare(a.Number, b.Number)
 	})
 
 	c.Printf("  Found <lightBlue>%d</> filtered PRs: ", len(filteredPRs))

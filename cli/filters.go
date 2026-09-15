@@ -17,16 +17,16 @@ func (f FlagData) GetFilters() []Filter {
 	var filters []Filter
 
 	// should these return errors
-	if f := GetFilterForAuthors(f.Filters.Authors); f != nil {
-		filters = append(filters, *f)
+	if filter := GetFilterForAuthors(f.Filters.Authors); filter != nil {
+		filters = append(filters, *filter)
 	}
 
-	if f := GetFilterForLabelsOr(f.Filters.LabelsOr); f != nil {
-		filters = append(filters, *f)
+	if filter := GetFilterForLabelsOr(f.Filters.LabelsOr); filter != nil {
+		filters = append(filters, *filter)
 	}
 
-	if f := GetFilterForLabelsAnd(f.Filters.LabelsAnd); f != nil {
-		filters = append(filters, *f)
+	if filter := GetFilterForLabelsAnd(f.Filters.LabelsAnd); filter != nil {
+		filters = append(filters, *filter)
 	}
 
 	fmt.Println()

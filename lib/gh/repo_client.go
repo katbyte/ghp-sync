@@ -24,7 +24,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 	retryClient.Logger = clog.Log
 
 	// github is.. special using 403 instead of 429 for rate limiting so we need to handle that here :(
-	retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	retryClient.Backoff = func(minWait, maxWait time.Duration, attemptNum int, resp *http.Response) time.Duration {
 		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			// get x-rate-limit-reset header
 			reset := resp.Header.Get("X-Ratelimit-Reset")
@@ -40,7 +40,7 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 			}
 		}
 
-		return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
+		return retryablehttp.DefaultBackoff(minWait, maxWait, attemptNum, resp)
 	}
 	retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 		if err != nil {
@@ -53,9 +53,9 @@ func (t Token) NewClient() (*github.Client, context.Context) {
 		return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 	}
 
-	if t := t.Token; t != nil {
+	if token := t.Token; token != nil {
 		src := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: *t},
+			&oauth2.Token{AccessToken: *token},
 		)
 		retryClient.HTTPClient = oauth2.NewClient(ctx, src)
 	}
@@ -88,7 +88,7 @@ func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 	retryClient.RetryWaitMax = 60 * time.Second
 
 	// Backoff that respects GitHub headers on 403/429
-	retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	retryClient.Backoff = func(minWait, maxWait time.Duration, attemptNum int, resp *http.Response) time.Duration {
 		// Prefer Retry-After when present (seconds)
 		if resp != nil {
 			if ra := resp.Header.Get("Retry-After"); ra != "" {
@@ -115,7 +115,7 @@ func (t Token) NewGraphQLClient() (*githubv4.Client, context.Context, error) {
 			}
 		}
 		// Fallback to exponential backoff with jitter
-		return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
+		return retryablehttp.DefaultBackoff(minWait, maxWait, attemptNum, resp)
 	}
 
 	// Retry policy: 5xx, 429, and GitHub’s 403 secondary/abuse limits

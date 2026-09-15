@@ -4,3 +4,5 @@
 dist/
 ghp-sync
 jiras/
+.tools/bin/
+.tools/venv/

@@ -2,7 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -195,6 +195,6 @@ func resolvePRFieldNames(populate, skip []string) []string {
 			result = append(result, fieldName)
 		}
 	}
-	sort.Strings(result)
+	slices.Sort(result)
 	return result
 }

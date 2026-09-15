@@ -1,8 +1,9 @@
 package gh
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 
 	"github.com/google/go-github/v89/github"
@@ -47,7 +48,7 @@ func (r Repo) ListAllPullRequests(state string, cb func([]*github.PullRequest, *
 func (r Repo) GetAllPullRequests(state string) (*[]github.PullRequest, error) {
 	var allPRs []github.PullRequest
 
-	err := r.ListAllPullRequests(state, func(prs []*github.PullRequest, resp *github.Response) error {
+	if err := r.ListAllPullRequests(state, func(prs []*github.PullRequest, _ *github.Response) error {
 		for i, p := range prs {
 			if p == nil {
 				clog.Log.Debugf("prs[%d] was nil, skipping", i)
@@ -64,13 +65,12 @@ func (r Repo) GetAllPullRequests(state string) (*[]github.PullRequest, error) {
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("failed to get all prs for %s/%s: %w", r.Owner, r.Name, err)
 	}
 
-	sort.Slice(allPRs, func(i, j int) bool {
-		return allPRs[i].GetNumber() < allPRs[j].GetNumber()
+	slices.SortFunc(allPRs, func(a, b github.PullRequest) int {
+		return cmp.Compare(a.GetNumber(), b.GetNumber())
 	})
 
 	return &allPRs, nil
