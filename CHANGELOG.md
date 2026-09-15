@@ -1,3 +1,11 @@
+## v0.3.1 (2026-09-15)
+
+- publish a multi-arch image to `ghcr.io/katbyte/ghp-sync` on release, signed with cosign
+- fix the docker build failing on go 1.25; the go version now comes from `.go-version`
+- build the image from a prebuilt binary on alpine, ~110MB instead of ~1GB
+- compose pulls the published image instead of building locally
+- add `.dockerignore`
+
 ## v0.3.0 (2026-09-15)
 
 - fix env var lists splitting on spaces, so `GITHUB_PR_POPULATE_FIELDS=PR#,Approved By` works
@@ -5,6 +13,7 @@
 - add actionlint, yamllint, shellcheck, and typos checks
 - enable revive and azproviderlint linters
 - pin github actions by commit hash, workflow tokens read-only
+- bump codeql-action to v4.38.0 and group init/analyze for dependabot
 - sign releases with cosign, attach build provenance
 - add `SECURITY.md` and README badges
 - move clog and version to go-kt

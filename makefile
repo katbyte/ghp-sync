@@ -75,7 +75,8 @@ install: ## Install ghp-sync into GOPATH/bin with version info from git
 	go install -ldflags "-X github.com/katbyte/go-kt/version.GitCommit=${GIT_COMMIT} -X github.com/katbyte/go-kt/version.Version=${GIT_VERSION}" .
 
 docker: ## Build the ghp-sync docker image
-	docker build --network=host --tag ghp-sync .
+	docker build --network=host --tag ghp-sync --build-arg GO_VERSION=$(shell cat .go-version) \
+		--build-arg VERSION=${GIT_VERSION} --build-arg GIT_COMMIT=${GIT_COMMIT} .
 
 tools: $(ACTIONLINT) $(GOFUMPT) $(GOLANGCI_LINT) $(GOLANGCI_LINT_MODULES) $(SHELLCHECK) $(TYPOS) $(YAMLLINT) ## Install all pinned dev tools into .tools/bin
 

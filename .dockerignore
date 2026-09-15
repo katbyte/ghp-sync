@@ -1,0 +1,9 @@
+# the build stage needs the source and vendor/ only; everything else just slows the context upload
+.git/
+.github/
+.idea/
+.claude/
+.tools/
+jiras/
+dist/
+ghp-sync

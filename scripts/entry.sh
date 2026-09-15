@@ -1,8 +1,6 @@
 #!/bin/sh
 
-# make install
-make
-make install
+# the image ships a prebuilt /usr/bin/ghp-sync, so this only wires up cron and tails the log
 
 #copy env
 env >> /etc/profile
