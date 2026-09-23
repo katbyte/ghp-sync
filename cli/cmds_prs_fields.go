@@ -209,6 +209,15 @@ var PRFields = map[string]PRFieldDef{
 			return ctx.PR.ReviewedAt.Format(time.RFC3339)
 		},
 	},
+	"Last Reviewer": {
+		Type: gh.ItemValueTypeText,
+		ComputeFn: func(ctx PRFieldContext) any {
+			if ctx.PR.LastReviewer == "" {
+				return nil // never reviewed
+			}
+			return ctx.PR.LastReviewer
+		},
+	},
 	"Filtered Review Count": {
 		Type: gh.ItemValueTypeNumber,
 		ComputeFn: func(ctx PRFieldContext) any {

@@ -34,6 +34,7 @@ type PullRequest struct {
 	MergedAt                   time.Time
 	MergedBy                   string
 	ReviewedAt                 time.Time // when the most recent submitted review (any state except pending) was left, zero when unreviewed
+	LastReviewer               string    // who left that review
 	Draft                      bool
 	Milestone                  string
 	Mergeable                  string // MERGEABLE, CONFLICTING, or UNKNOWN (github may still be computing)
@@ -271,6 +272,7 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 		for _, review := range pullRequest.Reviews.Nodes {
 			if review.State != string(githubv4.PullRequestReviewStatePending) && review.SubmittedAt.After(pr.ReviewedAt) {
 				pr.ReviewedAt = review.SubmittedAt
+				pr.LastReviewer = review.Author.Login
 			}
 
 			// requesters ordered by their first change request, comment counts summed across all of them

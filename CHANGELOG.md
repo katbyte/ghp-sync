@@ -1,3 +1,7 @@
+## Unreleased
+
+- add `Last Reviewer` PR field, who left the most recent submitted review; refreshed on open PRs too
+
 ## v0.4.0 (2026-09-23)
 
 - add `Reviewed At` PR field, the date of the most recent submitted review; refreshed on open PRs too
