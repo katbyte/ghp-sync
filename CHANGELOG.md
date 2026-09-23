@@ -1,3 +1,10 @@
+## Unreleased
+
+- ci: scan the release binary, the published docker image and a build of main with trivy for known vulnerabilities; a release reruns the failed scan in place
+- docker: upgrade alpine packages when building the image, so a release picks up base image security fixes
+- ci: dependabot runs monthly and groups updates into one PR per ecosystem
+- bump golang.org/x/text to v0.42.0 for CVE-2026-56852, a hang on invalid UTF-8 input; ghp-sync never calls the affected code, but the binary now scans clean
+
 ## v0.3.2 (2026-09-15)
 
 - publish the `v`-prefixed image tag too, so `:v0.3.2` works alongside `:0.3.2`, `:0.3` and `:latest`
