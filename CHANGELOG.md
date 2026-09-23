@@ -1,4 +1,4 @@
-## Unreleased
+## v0.5.0 (2026-09-23)
 
 - add `Last Reviewer` PR field, who left the most recent submitted review; refreshed on open PRs too ([#27](https://github.com/katbyte/ghp-sync/pull/27))
 
