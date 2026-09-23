@@ -14,13 +14,13 @@ import (
 // prRefreshDefaultFields are the fields refreshed by default for closed/merged PRs. Fields needing
 // data we don't fetch here (review counts, waiting days) are excluded so we don't overwrite real
 // values with zeros; use --pr-populate-fields to override.
-var prRefreshDefaultFields = []string{"Status", "PR#", "User", "Open Days", "Created At", "Closed At", "Merged At", "Merged By", "Reviewed By", "Approved By", "Changes Requested By", "CI", "Mergeable"}
+var prRefreshDefaultFields = []string{"Status", "PR#", "User", "Open Days", "Created At", "Closed At", "Merged At", "Merged By", "Reviewed By", "Approved By", "Changes Requested By", "Last Reviewed At", "CI", "Mergeable"}
 
 // prRefreshOpenFields are the fields safe to refresh on open PRs with --include-open: the REST
 // lookup can't see the review decision, so Status would incorrectly knock "Approved" PRs back
 // to "Waiting", and waiting/count data isn't available at all. CI/Mergeable are fetched
 // separately via GraphQL when needed.
-var prRefreshOpenFields = map[string]bool{"PR#": true, "User": true, "Created At": true, "Open Days": true, "Reviewed By": true, "Approved By": true, "Changes Requested By": true, "CI": true, "Mergeable": true}
+var prRefreshOpenFields = map[string]bool{"PR#": true, "User": true, "Created At": true, "Open Days": true, "Reviewed By": true, "Approved By": true, "Changes Requested By": true, "Last Reviewed At": true, "CI": true, "Mergeable": true}
 
 // CmdPRsRefresh walks the project board itself and refreshes fields on PR items that are now
 // closed or merged, rather than syncing PRs from a repo. This catches PRs that were added while
@@ -67,7 +67,7 @@ func CmdPRsRefresh(_ *cobra.Command, _ []string) error {
 
 	needReviews, needChangesRequested, needMergeable := false, false, false
 	for _, fieldName := range prFields {
-		if fieldName == "Reviewed By" || fieldName == "Approved By" || fieldName == "Changes Requested By" {
+		if fieldName == "Reviewed By" || fieldName == "Approved By" || fieldName == "Changes Requested By" || fieldName == "Last Reviewed At" {
 			needReviews = true
 		}
 		if fieldName == "Changes Requested By" {
@@ -196,6 +196,9 @@ func CmdPRsRefresh(_ *cobra.Command, _ []string) error {
 			var changeRequests []changeRequest
 			for _, review := range reviews {
 				login := review.GetUser().GetLogin()
+				if review.GetState() != "PENDING" && review.GetSubmittedAt().After(pr.LastReviewedAt) {
+					pr.LastReviewedAt = review.GetSubmittedAt().Time
+				}
 				switch review.GetState() {
 				case "APPROVED":
 					if !approvedBy[login] {
