@@ -33,7 +33,7 @@ type PullRequest struct {
 	ClosedAt                   time.Time
 	MergedAt                   time.Time
 	MergedBy                   string
-	ReviewedAt             time.Time // when the most recent submitted review (any state except pending) was left, zero when unreviewed
+	ReviewedAt                 time.Time // when the most recent submitted review (any state except pending) was left, zero when unreviewed
 	Draft                      bool
 	Milestone                  string
 	Mergeable                  string // MERGEABLE, CONFLICTING, or UNKNOWN (github may still be computing)
