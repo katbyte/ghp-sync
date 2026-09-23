@@ -33,6 +33,7 @@ type PullRequest struct {
 	ClosedAt                   time.Time
 	MergedAt                   time.Time
 	MergedBy                   string
+	ReviewedAt                 time.Time // when the most recent submitted review (any state except pending) was left, zero when unreviewed
 	Draft                      bool
 	Milestone                  string
 	Mergeable                  string // MERGEABLE, CONFLICTING, or UNKNOWN (github may still be computing)
@@ -111,7 +112,8 @@ type pullRequestsQuery struct {
 						Comments struct {
 							TotalCount int
 						}
-						State string
+						State       string
+						SubmittedAt time.Time
 					}
 				} `graphql:"reviews(first: 100)"`
 
@@ -267,6 +269,10 @@ func (q pullRequestsQuery) flatten(reviewers map[string]struct{}) []PullRequest 
 		approvedBy := map[string]bool{}
 		changesRequestedBy := map[string]int{} // login -> index into pr.ChangesRequestedBy
 		for _, review := range pullRequest.Reviews.Nodes {
+			if review.State != string(githubv4.PullRequestReviewStatePending) && review.SubmittedAt.After(pr.ReviewedAt) {
+				pr.ReviewedAt = review.SubmittedAt
+			}
+
 			// requesters ordered by their first change request, comment counts summed across all of them
 			if review.State == string(githubv4.PullRequestReviewStateChangesRequested) {
 				if idx, ok := changesRequestedBy[review.Author.Login]; ok {
