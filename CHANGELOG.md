@@ -1,6 +1,9 @@
-## Unreleased
+## v0.4.0 (2026-09-23)
 
 - add `Last Reviewed At` PR field, the date of the most recent submitted review; refreshed on open PRs too
+- ci: scan the release binary, the published docker image and a build of main with trivy for known vulnerabilities; a release reruns the failed scan in place
+- docker: upgrade alpine packages when building the image, so a release picks up base image security fixes
+- bump golang.org/x/text to v0.42.0 for CVE-2026-56852, a hang on invalid UTF-8 input; ghp-sync never calls the affected code, but the binary now scans clean
 
 ## v0.3.2 (2026-09-15)
 

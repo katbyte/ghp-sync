@@ -4,19 +4,25 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
-      # codeql-action/init and /analyze are separate dependencies but must run the same version,
-      # so bump them in one PR - separate PRs each fail with a version mismatch
-      codeql-action:
+      github-actions:
         patterns:
-          - "github/codeql-action*"
+          - "*"
 
   # dependabot auto-detects the vendor/ directory and runs `go mod tidy` + `go mod vendor` on updates
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    cooldown:
+      default-days: 7
+    groups:
+      go-modules:
+        patterns:
+          - "*"
 
   # dev tools (actionlint, golangci-lint, gofumpt) pinned in .tools/go.mod; tools move slowly,
   # so only check quarterly
@@ -24,3 +30,9 @@ updates:
     directory: "/.tools"
     schedule:
       interval: "quarterly"
+    cooldown:
+      default-days: 7
+    groups:
+      go-tools:
+        patterns:
+          - "*"
