@@ -21,9 +21,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -mod=
     -ldflags "-s -w -X github.com/katbyte/go-kt/version.Version=${VERSION} -X github.com/katbyte/go-kt/version.GitCommit=${GIT_COMMIT}" \
     -o /out/ghp-sync .
 
-# dcron runs the sync on a schedule, gh backs the graphql queries, tzdata makes TZ work
+# dcron runs the sync on a schedule, gh backs the graphql queries, tzdata makes TZ work. upgrade first so a
+# release rebuild picks up alpine security fixes the base image tag has not been rebuilt with yet
 FROM alpine:3.24
-RUN apk add --no-cache bash ca-certificates dcron github-cli tzdata
+RUN apk upgrade --no-cache && apk add --no-cache bash ca-certificates dcron github-cli tzdata
 
 WORKDIR /app
 COPY --from=build /out/ghp-sync /usr/bin/ghp-sync
