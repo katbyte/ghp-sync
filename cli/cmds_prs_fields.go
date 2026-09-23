@@ -200,13 +200,13 @@ var PRFields = map[string]PRFieldDef{
 			return ctx.PR.MergedAt.Format(time.RFC3339)
 		},
 	},
-	"Last Reviewed At": {
+	"Reviewed At": {
 		Type: gh.ItemValueTypeDate,
 		ComputeFn: func(ctx PRFieldContext) any {
-			if ctx.PR.LastReviewedAt.IsZero() {
+			if ctx.PR.ReviewedAt.IsZero() {
 				return nil // never reviewed
 			}
-			return ctx.PR.LastReviewedAt.Format(time.RFC3339)
+			return ctx.PR.ReviewedAt.Format(time.RFC3339)
 		},
 	},
 	"Filtered Review Count": {
