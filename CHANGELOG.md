@@ -1,6 +1,6 @@
 ## Unreleased
 
-- docker: the scheduled sync ran twice at once; the crontab was written to `/etc/cron.d`, which dcron reads by itself, and then installed again with `crontab`
+- docker: the scheduled sync ran twice at once; the crontab was written to `/etc/cron.d`, which dcron reads by itself, and then installed again with `crontab` ([#29](https://github.com/katbyte/ghp-sync/pull/29))
 
 ## v0.5.0 (2026-09-23)
 
