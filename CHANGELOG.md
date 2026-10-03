@@ -1,3 +1,7 @@
+## Unreleased
+
+- docker: the scheduled sync ran twice at once; the crontab was written to `/etc/cron.d`, which dcron reads by itself, and then installed again with `crontab`
+
 ## v0.5.0 (2026-09-23)
 
 - add `Last Reviewer` PR field, who left the most recent submitted review; refreshed on open PRs too ([#27](https://github.com/katbyte/ghp-sync/pull/27))
