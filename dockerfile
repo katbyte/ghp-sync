@@ -28,7 +28,11 @@ RUN apk upgrade --no-cache && apk add --no-cache bash ca-certificates dcron gith
 
 WORKDIR /app
 COPY --from=build /out/ghp-sync /usr/bin/ghp-sync
-COPY scripts/entry.sh scripts/run.sh /app/scripts/
-RUN chmod +x /app/scripts/entry.sh /app/scripts/run.sh
+COPY scripts/entry.sh scripts/run.sh scripts/healthcheck.sh /app/scripts/
+RUN chmod +x /app/scripts/entry.sh /app/scripts/run.sh /app/scripts/healthcheck.sh
+
+# unhealthy from a failed sync until the next one passes. the check reads a result run.sh already recorded,
+# so retrying cannot change the answer and a single failed check is enough
+HEALTHCHECK --interval=1m --timeout=10s --retries=1 CMD ["/app/scripts/healthcheck.sh"]
 
 CMD ["/app/scripts/entry.sh"]

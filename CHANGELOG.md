@@ -1,3 +1,7 @@
+## Unreleased
+
+- docker: add a healthcheck; the container reports unhealthy after a scheduled sync fails, and healthy again once one passes
+
 ## v0.5.1 (2026-10-03)
 
 - docker: the scheduled sync ran twice at once; the crontab was written to `/etc/cron.d`, which dcron reads by itself, and then installed again with `crontab` ([#29](https://github.com/katbyte/ghp-sync/pull/29))
