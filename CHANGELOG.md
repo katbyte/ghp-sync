@@ -1,6 +1,7 @@
 ## Unreleased
 
 - docker: add a healthcheck; the container reports unhealthy after a scheduled sync fails, and healthy again once one passes
+- bump go to 1.26.9 for CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031, denial of service bugs in the standard library's `net/http` and `crypto/tls`, which ghp-sync talks to GitHub through
 
 ## v0.5.1 (2026-10-03)
 
