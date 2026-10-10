@@ -1,7 +1,7 @@
-## Unreleased
+## v0.5.2 (2026-10-09)
 
-- docker: add a healthcheck; the container reports unhealthy after a scheduled sync fails, and healthy again once one passes
-- bump go to 1.26.9 for CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031, denial of service bugs in the standard library's `net/http` and `crypto/tls`, which ghp-sync talks to GitHub through
+- docker: add a healthcheck; the container reports unhealthy after a scheduled sync fails, and healthy again once one passes ([b63fc81](https://github.com/katbyte/ghp-sync/commit/b63fc81))
+- bump go to 1.26.9 for CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031, denial of service bugs in the standard library's `net/http` and `crypto/tls`, which ghp-sync talks to GitHub through ([e517ccc](https://github.com/katbyte/ghp-sync/commit/e517ccc))
 
 ## v0.5.1 (2026-10-03)
 
