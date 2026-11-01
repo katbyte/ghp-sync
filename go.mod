@@ -1,12 +1,12 @@
 module github.com/katbyte/ghp-sync
 
-go 1.26.9
+go 1.27.0
 
 require (
 	github.com/google/go-github/v89 v89.0.0
-	github.com/gookit/color v1.6.1
+	github.com/gookit/color v1.6.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/katbyte/go-kt v0.2.0
+	github.com/katbyte/go-kt v0.9.1
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -30,6 +30,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )
